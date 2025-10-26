@@ -39,3 +39,14 @@
 
 # debug information files
 *.dwo
+
+# build directories
+build_debug
+build_release
+
+# ide directories
+.vscode
+.vs
+
+# polyscope files
+*.ini
