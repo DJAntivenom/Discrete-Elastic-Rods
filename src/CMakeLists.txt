@@ -32,4 +32,7 @@ target_link_libraries(${DER_TARGET_NAME}
 target_sources(${DER_TARGET_NAME}
   PRIVATE
   "main.cpp"
+
+  "DiscreteElasticRod.cpp"
+  "PolyscopeCallback.cpp"
 )

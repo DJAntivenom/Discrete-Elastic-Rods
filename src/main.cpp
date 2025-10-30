@@ -1,33 +1,31 @@
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#pragma GCC diagnostic ignored "-Wunused-function"
 #include <polyscope/polyscope.h>
-#include <polyscope/surface_mesh.h>
+#pragma GCC diagnostic pop
 
-#include <Eigen/Eigen>
+#include <PolyscopeCallback.hpp>
 
-#include <iostream>
-
-int main(int argc, char *argv[])
+int main()
 {
+    overrideCoutBuffer();
+
+    polyscope::options::autocenterStructures = true;
+    polyscope::options::autoscaleStructures = false;
+    polyscope::options::automaticallyComputeSceneExtents = true;
+    polyscope::view::farClipRatio = 50;
+    polyscope::state::lengthScale = 1.;
+    polyscope::view::setUpDir(polyscope::view::UpDir::YUp);
+    polyscope::view::windowWidth = 1920;
+    polyscope::view::windowHeight = 1080;
+    polyscope::options::groundPlaneMode = polyscope::GroundPlaneMode::TileReflection;
+    polyscope::options::groundPlaneHeightFactor = 0.;
+    polyscope::options::shadowDarkness = 0.4;
+    polyscope::options::buildGui = false;
+    polyscope::options::ssaaFactor = 2;
     polyscope::init();
 
-    Eigen::MatrixX3f vertices{
-        {0, 0, 0},
-        {1, 0, 0},
-        {0.5f, std::sqrt(3.f) * 0.5f, 0},
-    };
-
-    Eigen::MatrixX3i faces{
-        {0, 1, 2},
-    };
-
-    Eigen::Matrix3f colors{
-        {1, 0, 0},
-        {0, 1, 0},
-        {0, 0, 1},
-    };
-
-    polyscope::registerSurfaceMesh("triangle", vertices, faces)
-        ->addVertexColorQuantity("vColors", colors)
-        ->setEnabled(true);
+    polyscope::state::userCallback = polyscopeCallback;
 
     polyscope::show();
 
