@@ -1,0 +1,16 @@
+root = true
+
+[*]
+charset = utf-8
+trim_trailing_whitespace = true
+end_of_line = lf
+insert_final_newline = true
+
+[Makefile]
+indent_style = tab
+
+[*.{cpp,hpp}]
+indent_size = 4
+cpp_new_line_before_open_brace_block = new_line
+cpp_indent_within_parentheses = align_to_parenthesis
+cpp_space_pointer_reference_alignment = right
