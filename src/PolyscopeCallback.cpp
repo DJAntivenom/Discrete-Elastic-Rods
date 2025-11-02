@@ -11,13 +11,14 @@
 #include <PolyscopeCallback.hpp>
 #include <vector>
 
-/* Get rid of anyoing unused ... warinings */
+ /* Get rid of anyoing unused ... warinings */
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 #pragma GCC diagnostic ignored "-Wunused-function"
 #include <polyscope/curve_network.h>
 #include <polyscope/polyscope.h>
 #include <polyscope/surface_mesh.h>
+#include <polyscope/point_cloud.h>
 #pragma GCC diagnostic pop
 
 /**
@@ -46,6 +47,11 @@ static float delta_time = 0.001;
 static bool draw_centerline = true;
 
 /**
+ * @brief If true, the handles for controlling the rods will be drawn.
+ */
+static bool draw_handles = true;
+
+/**
  * @brief Relative radius of the centerline.
  */
 static float centerline_radius = 0.02;
@@ -66,6 +72,7 @@ static std::ostringstream log_stream;
 static void makeConfigWindow()
 {
     ImGui::InputFloat("Time-step", &delta_time, 0.001);
+    ImGui::Checkbox("Draw handles", &draw_handles);
     ImGui::Checkbox("Draw centerline", &draw_centerline);
     if (draw_centerline)
     {
@@ -128,6 +135,54 @@ static void updateViewerData()
 
             lines->setRadius(centerline_radius);
         }
+    }
+
+    if (draw_handles && !rods.empty())
+    {
+        // TODO: Make point sizes, distances, colors into a const?
+
+        // Render via point cloud
+        const uint64_t rod_count = rods.size();
+        int n_points = rod_count * 4;
+        Eigen::MatrixXf points = Eigen::MatrixXf::Zero(n_points, 3);
+        Eigen::MatrixXf points_c = Eigen::MatrixXf::Zero(n_points, 3);
+
+        // TODO: This is currently inverted, so that the handles point in and don't destroy the scaling. Fix this after asking a TA.
+        const float direction_offset = -0.2f;
+
+        for (uint64_t rod_index = 0; rod_index < rod_count; ++rod_index)
+        {
+            // TODO: Does this make a copy?
+            Eigen::MatrixX3f vertex_positions = rods[rod_index].getVertexPositions().reshaped(3, Eigen::AutoSize).transpose();
+            points_c(rod_index, Eigen::seq(0, 2)) = points_c(rod_index + 2, Eigen::seq(0, 2)) = Eigen::Vector3f(0.0, 0.0, 1.0).transpose();
+            points_c(rod_index + 1, Eigen::seq(0, 2)) = points_c(rod_index + 3, Eigen::seq(0, 2)) = Eigen::Vector3f(1.0, 0.0, 0.0).transpose();
+
+            // TODO: Cleanup duplication here
+            // Handle 1: Start position handle, head of the rod
+            points(rod_index, Eigen::seq(0, 2)) = vertex_positions.row(0);
+            // Handle 2: Start direction handle, offset from the head
+            points(rod_index + 1, Eigen::seq(0, 2)) = vertex_positions.row(0) - (vertex_positions.row(1) - vertex_positions.row(0)).normalized() * direction_offset;
+
+            int verts = vertex_positions.rows();
+            // Handle 3: End position handle, tail of the rod
+            points(rod_index + 2, Eigen::seq(0, 2)) = vertex_positions.row(verts - 1);
+            // Handle 4: End direction handle, offset from the tail
+            points(rod_index + 3, Eigen::seq(0, 2)) = vertex_positions.row(verts - 1) - (vertex_positions.row(verts - 2) - vertex_positions.row(verts - 1)).normalized() * direction_offset;
+        }
+
+        // Add global centering placeholders
+        // TODO: Remove this, this is just for demo purposes
+        // float max_coordinate = points.cwiseAbs().maxCoeff(); // Make sure it's not too obvious
+        // points(rod_count, Eigen::seq(0, 2)) = Eigen::Vector3f(max_coordinate, max_coordinate, max_coordinate).transpose();
+        // points(rod_count + 1, Eigen::seq(0, 2)) = -Eigen::Vector3f(max_coordinate, max_coordinate, max_coordinate).transpose();
+        // points_c(rod_count, Eigen::seq(0, 2)) = points_c(rod_count + 1, Eigen::seq(0, 2)) = Eigen::Vector3f(0.0, 0.0, 0.0).transpose();
+
+        auto pointcloud = polyscope::registerPointCloud("Handles", points);
+        pointcloud->setPointRadius(0.03);
+        auto pointcloud_color = pointcloud->addColorQuantity("Color", points_c);
+        pointcloud_color->setEnabled(true);
+
+        std::cout << "Points: " << points << std::endl;
     }
 }
 
