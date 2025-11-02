@@ -37,6 +37,26 @@
 static std::vector<DiscreteElasticRod> rods;
 
 /**
+ * \brief Number of handles per rod.
+ */
+const int handles_count = 4;
+
+/**
+ * \brief The position of the handles to control the rods
+ *
+ * Block matrix of dimension (handles_count * rods.size()) x 3,
+ * where each handles_count rows contains the handle positions
+ * for a rod.
+ */
+static Eigen::MatrixXf handles;
+
+/**
+ * \brief The colors for the handles. Must correspond to the
+ * dimension of handles.
+ */
+static Eigen::MatrixXf handle_colors;
+
+/**
  * \brief Size of the timestep in seconds.
  */
 static float delta_time = 0.001;
@@ -67,6 +87,59 @@ static int n_to_add = 10;
 static std::ostringstream log_stream;
 
 /**
+ * \brief Update the position of the handles for selected rod.
+ */
+static void update_rod_handles(int rod_index)
+{
+
+    // TODO: Make point sizes, distances, colors into a const?
+    // TODO: This is currently inverted, so that the handles point in and don't destroy the scaling. Fix this after asking a TA.
+    const float direction_offset = -0.2f;
+
+    Eigen::MatrixX3f vertex_positions = rods[rod_index].getVertexPositions().reshaped(3, Eigen::AutoSize).transpose();
+
+    // TODO: Cleanup duplication here, initialize rotation handles too
+    // Handle 1: Start position handle, head of the rod
+    handles(rod_index, Eigen::seq(0, 2)) = vertex_positions.row(0);
+    // Handle 2: Start direction handle, offset from the head
+    handles(rod_index + 1, Eigen::seq(0, 2)) = vertex_positions.row(0) - (vertex_positions.row(1) - vertex_positions.row(0)).normalized() * direction_offset;
+
+    int verts = vertex_positions.rows();
+    // Handle 3: End position handle, tail of the rod
+    handles(rod_index + 2, Eigen::seq(0, 2)) = vertex_positions.row(verts - 1);
+    // Handle 4: End direction handle, offset from the tail
+    handles(rod_index + 3, Eigen::seq(0, 2)) = vertex_positions.row(verts - 1) - (vertex_positions.row(verts - 2) - vertex_positions.row(verts - 1)).normalized() * direction_offset;
+}
+
+/**
+ * \brief Initialize a new rod.
+ *
+ * TODO: Where to put these helper functions?
+ */
+static void initialize_rod(int n_vertices)
+{
+    rods.emplace_back(n_vertices);
+
+    // Add the new handle positions
+    handles.resize(handles.rows() + handles_count, 3);
+    handle_colors.resize(handle_colors.rows() + handles_count, 3);
+
+    // Initialize positions
+    const uint64_t rod_count = rods.size();
+    for (uint64_t rod_index = 0; rod_index < rod_count; ++rod_index)
+    {
+        update_rod_handles(rod_index);
+    }
+
+    // Set the colors
+    handle_colors(Eigen::seq(handles.rows() - handles_count, handles.rows() - 1), Eigen::seq(0, 2)).setZero();
+    // Blue for the endpoints
+    handle_colors(handles.rows() - 4, Eigen::seq(0, 2)) = handle_colors(handles.rows() - 2, Eigen::seq(0, 2)) = Eigen::Vector3f(0.0, 0.0, 1.0).transpose();
+    // Red for the direction
+    handle_colors(handles.rows() - 3, Eigen::seq(0, 2)) = handle_colors(handles.rows() - 1, Eigen::seq(0, 2)) = Eigen::Vector3f(1.0, 0.0, 0.0).transpose();
+}
+
+/**
  * \brief Creates the GUI holding the controls of the simulation.
  */
 static void makeConfigWindow()
@@ -83,7 +156,7 @@ static void makeConfigWindow()
         ImGui::InputInt("Vertices n", &n_to_add);
         if (ImGui::Button("Create Rod"))
         {
-            rods.emplace_back(n_to_add);
+            initialize_rod(n_to_add);
         }
     }
     ImGui::Checkbox("Automatic bounding-box", &polyscope::options::automaticallyComputeSceneExtents);
@@ -139,50 +212,12 @@ static void updateViewerData()
 
     if (draw_handles && !rods.empty())
     {
-        // TODO: Make point sizes, distances, colors into a const?
-
-        // Render via point cloud
-        const uint64_t rod_count = rods.size();
-        int n_points = rod_count * 4;
-        Eigen::MatrixXf points = Eigen::MatrixXf::Zero(n_points, 3);
-        Eigen::MatrixXf points_c = Eigen::MatrixXf::Zero(n_points, 3);
-
-        // TODO: This is currently inverted, so that the handles point in and don't destroy the scaling. Fix this after asking a TA.
-        const float direction_offset = -0.2f;
-
-        for (uint64_t rod_index = 0; rod_index < rod_count; ++rod_index)
-        {
-            // TODO: Does this make a copy?
-            Eigen::MatrixX3f vertex_positions = rods[rod_index].getVertexPositions().reshaped(3, Eigen::AutoSize).transpose();
-            points_c(rod_index, Eigen::seq(0, 2)) = points_c(rod_index + 2, Eigen::seq(0, 2)) = Eigen::Vector3f(0.0, 0.0, 1.0).transpose();
-            points_c(rod_index + 1, Eigen::seq(0, 2)) = points_c(rod_index + 3, Eigen::seq(0, 2)) = Eigen::Vector3f(1.0, 0.0, 0.0).transpose();
-
-            // TODO: Cleanup duplication here
-            // Handle 1: Start position handle, head of the rod
-            points(rod_index, Eigen::seq(0, 2)) = vertex_positions.row(0);
-            // Handle 2: Start direction handle, offset from the head
-            points(rod_index + 1, Eigen::seq(0, 2)) = vertex_positions.row(0) - (vertex_positions.row(1) - vertex_positions.row(0)).normalized() * direction_offset;
-
-            int verts = vertex_positions.rows();
-            // Handle 3: End position handle, tail of the rod
-            points(rod_index + 2, Eigen::seq(0, 2)) = vertex_positions.row(verts - 1);
-            // Handle 4: End direction handle, offset from the tail
-            points(rod_index + 3, Eigen::seq(0, 2)) = vertex_positions.row(verts - 1) - (vertex_positions.row(verts - 2) - vertex_positions.row(verts - 1)).normalized() * direction_offset;
-        }
-
-        // Add global centering placeholders
-        // TODO: Remove this, this is just for demo purposes
-        // float max_coordinate = points.cwiseAbs().maxCoeff(); // Make sure it's not too obvious
-        // points(rod_count, Eigen::seq(0, 2)) = Eigen::Vector3f(max_coordinate, max_coordinate, max_coordinate).transpose();
-        // points(rod_count + 1, Eigen::seq(0, 2)) = -Eigen::Vector3f(max_coordinate, max_coordinate, max_coordinate).transpose();
-        // points_c(rod_count, Eigen::seq(0, 2)) = points_c(rod_count + 1, Eigen::seq(0, 2)) = Eigen::Vector3f(0.0, 0.0, 0.0).transpose();
-
-        auto pointcloud = polyscope::registerPointCloud("Handles", points);
-        pointcloud->setPointRadius(0.03);
-        auto pointcloud_color = pointcloud->addColorQuantity("Color", points_c);
+        auto pointcloud = polyscope::registerPointCloud("Handles", handles);
+        pointcloud->setPointRadius(0.03); // TODO: Make this a constant
+        auto pointcloud_color = pointcloud->addColorQuantity("Color", handle_colors);
         pointcloud_color->setEnabled(true);
 
-        std::cout << "Points: " << points << std::endl;
+        // std::cout << "Points: " << points << std::endl;
     }
 }
 
@@ -212,7 +247,7 @@ void polyscopeCallback()
     {
         rod.update(delta_time);
     }
-};
+}
 
 /////////////////////////////////////////////////////
 ////////// COUT CAPTURING IMPLEMENTATION ////////////
