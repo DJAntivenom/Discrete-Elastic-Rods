@@ -10,7 +10,7 @@ int main()
 {
     overrideCoutBuffer();
 
-    polyscope::options::autocenterStructures = true;
+    polyscope::options::autocenterStructures = false;
     polyscope::options::autoscaleStructures = false;
     polyscope::options::automaticallyComputeSceneExtents = true;
     polyscope::view::farClipRatio = 50;

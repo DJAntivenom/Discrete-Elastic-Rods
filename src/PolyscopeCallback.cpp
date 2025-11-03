@@ -93,8 +93,7 @@ static void update_rod_handles(int rod_index)
 {
 
     // TODO: Make point sizes, distances, colors into a const?
-    // TODO: This is currently inverted, so that the handles point in and don't destroy the scaling. Fix this after asking a TA.
-    const float direction_offset = -0.2f;
+    const float direction_offset = 0.2f;
 
     Eigen::MatrixX3f vertex_positions = rods[rod_index].getVertexPositions().reshaped(3, Eigen::AutoSize).transpose();
 
