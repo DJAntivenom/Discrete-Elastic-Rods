@@ -27,6 +27,19 @@ cmake --build build_debug
 ./build_debug/discrete_elastic_rods
 ```
 
+# Conventions
+
+## Naming and Comments
+
+- Prefix member variables with `m_`
+- Add paper variable names and dimensions in relevant comments/briefs
+- Prefer naming variables same as in the paper
+
+## Data representation
+
+- Store entries over multiple vectors/edges as 3xn matrices
+- Store values in column vectors
+
 # References
 
 [1] Miklós Bergou et al. "Discrete elastic rods". In: ACM SIGGRAPH 2008 Papers. SIG-GRAPH '08. Los Angeles, California: Association for Computing Machinery, 2008. isbn: 9781450301121. doi: 10.1145/1399504.1360662. url: https://doi.org/10.1145/1399504.1360662.
