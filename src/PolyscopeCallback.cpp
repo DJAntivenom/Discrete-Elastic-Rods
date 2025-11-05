@@ -97,8 +97,8 @@ static void update_rod_handles(int rod_index)
 
     Eigen::MatrixX3f vertex_positions = rods[rod_index].getVertexPositions().reshaped(3, Eigen::AutoSize).transpose();
 
-    Eigen::Vector3f direction_handle_dir = (vertex_positions.row(1) - vertex_positions.row(0)).normalized() * direction_offset;
-    Eigen::Vector3f orientation_handle_dir = (vertex_positions.row(1) - vertex_positions.row(0)).normalized() * direction_offset;
+    Eigen::RowVector3f direction_handle_dir = (vertex_positions.row(1) - vertex_positions.row(0)).normalized() * direction_offset;
+    Eigen::RowVector3f orientation_handle_dir = (vertex_positions.row(1) - vertex_positions.row(0)).normalized() * direction_offset;
 
     // TODO: Cleanup duplication here, initialize rotation handles too
     int i = 0;
@@ -111,7 +111,7 @@ static void update_rod_handles(int rod_index)
     // End position handle, tail of the rod
     handles(rod_index + i++, Eigen::seq(0, 2)) = vertex_positions.row(verts - 1);
     // End direction handle, offset from the tail
-    handles(rod_index + i++, Eigen::seq(0, 2)) = vertex_positions.row(verts - 1) - direction_handle_dir;
+    handles(rod_index + i++, Eigen::seq(0, 2)) = vertex_positions.row(verts - 1) + direction_handle_dir;
 }
 
 /**
@@ -209,7 +209,7 @@ static void updateViewerData()
 
             auto lines = polyscope::registerCurveNetworkLine("Centerline_" + std::to_string(rod_index), vertex_positions);
 
-            lines->setRadius(centerline_radius);
+            lines->setRadius(centerline_radius, false);
         }
     }
 
