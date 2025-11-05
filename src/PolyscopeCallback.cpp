@@ -162,7 +162,6 @@ static void makeConfigWindow()
             ImGui::InputInt("Vertices n", &n_to_add);
             if (ImGui::Button("Create Rod"))
             {
-                rods.emplace_back(n_to_add);
                 initialize_rod(n_to_add);
             }
         }
@@ -246,8 +245,6 @@ static void updateViewerData()
         pointcloud->setPointRadius(0.03); // TODO: Make this a constant
         auto pointcloud_color = pointcloud->addColorQuantity("Color", handle_colors);
         pointcloud_color->setEnabled(true);
-
-        // std::cout << "Points: " << points << std::endl;
     }
 }
 

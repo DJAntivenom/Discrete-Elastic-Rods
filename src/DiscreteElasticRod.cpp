@@ -31,6 +31,8 @@ void DiscreteElasticRod::update(double delta_time, size_t max_newton_iterations)
 
     m_vertex_positions.col(m_n / 2).y() = y;
 
+    return;
+
     /* algorithm outline */
 
     /// 4., 5. apply torque and integrate rigid body
