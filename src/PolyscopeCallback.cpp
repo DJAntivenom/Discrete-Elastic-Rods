@@ -39,7 +39,7 @@ static std::vector<DiscreteElasticRod> rods;
 /**
  * \brief Number of handles per rod.
  */
-const int handles_count = 4;
+const int handles_count = 6;
 
 /**
  * \brief The position of the handles to control the rods
@@ -98,24 +98,29 @@ static void updateRodHandles(int rod_index)
 {
     // TODO: Make point sizes, distances, colors into a const?
     const float direction_offset = 0.2f;
+    const float rotation_offset = 0.1f;
 
     Eigen::MatrixX3f vertex_positions = rods[rod_index].getVertexPositions().reshaped(3, Eigen::AutoSize).transpose();
 
-    Eigen::RowVector3f direction_handle_dir = (vertex_positions.row(1) - vertex_positions.row(0)).normalized() * direction_offset;
-    Eigen::RowVector3f orientation_handle_dir = (vertex_positions.row(1) - vertex_positions.row(0)).normalized() * direction_offset;
+    Eigen::RowVector3f direction_handle_dir = -(vertex_positions.row(1) - vertex_positions.row(0)).normalized() * direction_offset;
+    Eigen::RowVector3f orientation_handle_dir = Eigen::RowVector3f(-direction_handle_dir[1], direction_handle_dir[0], 0).normalized() * rotation_offset; // Any possible normal vector
 
     // TODO: Cleanup duplication here, initialize rotation handles too
     int i = 0;
     // Start position handle, head of the rod
     handles(rod_index + i++, Eigen::seq(0, 2)) = vertex_positions.row(0);
     // Start direction handle, offset from the head
-    handles(rod_index + i++, Eigen::seq(0, 2)) = vertex_positions.row(0) - direction_handle_dir;
+    handles(rod_index + i++, Eigen::seq(0, 2)) = vertex_positions.row(0) + direction_handle_dir;
+    // Rotation setting, offset to the side
+    handles(rod_index + i++, Eigen::seq(0, 2)) = vertex_positions.row(0) + orientation_handle_dir;
 
     int verts = vertex_positions.rows();
     // End position handle, tail of the rod
     handles(rod_index + i++, Eigen::seq(0, 2)) = vertex_positions.row(verts - 1);
     // End direction handle, offset from the tail
-    handles(rod_index + i++, Eigen::seq(0, 2)) = vertex_positions.row(verts - 1) + direction_handle_dir;
+    handles(rod_index + i++, Eigen::seq(0, 2)) = vertex_positions.row(verts - 1) - direction_handle_dir;
+    // Rotation setting, offset to the side
+    handles(rod_index + i++, Eigen::seq(0, 2)) = vertex_positions.row(verts - 1) + orientation_handle_dir;
 }
 
 /**
@@ -141,9 +146,11 @@ static void initializeRod(int n_vertices)
     // Set the colors
     handle_colors(Eigen::seq(handles.rows() - handles_count, handles.rows() - 1), Eigen::seq(0, 2)).setZero();
     // Blue for the endpoints
-    handle_colors(handles.rows() - 4, Eigen::seq(0, 2)) = handle_colors(handles.rows() - 2, Eigen::seq(0, 2)) = Eigen::Vector3f(0.0, 0.0, 1.0).transpose();
+    handle_colors(handles.rows() - 6, Eigen::seq(0, 2)) = handle_colors(handles.rows() - 3, Eigen::seq(0, 2)) = Eigen::Vector3f(0.0, 0.0, 1.0).transpose();
     // Red for the direction
-    handle_colors(handles.rows() - 3, Eigen::seq(0, 2)) = handle_colors(handles.rows() - 1, Eigen::seq(0, 2)) = Eigen::Vector3f(1.0, 0.0, 0.0).transpose();
+    handle_colors(handles.rows() - 5, Eigen::seq(0, 2)) = handle_colors(handles.rows() - 2, Eigen::seq(0, 2)) = Eigen::Vector3f(1.0, 0.0, 0.0).transpose();
+    // Green for the orientation
+    handle_colors(handles.rows() - 4, Eigen::seq(0, 2)) = handle_colors(handles.rows() - 1, Eigen::seq(0, 2)) = Eigen::Vector3f(0.0, 1.0, 0.0).transpose();
 }
 
 /**
