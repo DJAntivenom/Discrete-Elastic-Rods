@@ -94,9 +94,8 @@ static std::ostringstream log_stream;
 /**
  * \brief Update the position of the handles for selected rod.
  */
-static void update_rod_handles(int rod_index)
+static void updateRodHandles(int rod_index)
 {
-
     // TODO: Make point sizes, distances, colors into a const?
     const float direction_offset = 0.2f;
 
@@ -124,7 +123,7 @@ static void update_rod_handles(int rod_index)
  *
  * TODO: Where to put these helper functions?
  */
-static void initialize_rod(int n_vertices)
+static void initializeRod(int n_vertices)
 {
     rods.emplace_back(n_vertices);
 
@@ -136,7 +135,7 @@ static void initialize_rod(int n_vertices)
     const uint64_t rod_count = rods.size();
     for (uint64_t rod_index = 0; rod_index < rod_count; ++rod_index)
     {
-        update_rod_handles(rod_index);
+        updateRodHandles(rod_index);
     }
 
     // Set the colors
@@ -162,7 +161,7 @@ static void makeConfigWindow()
             ImGui::InputInt("Vertices n", &n_to_add);
             if (ImGui::Button("Create Rod"))
             {
-                initialize_rod(n_to_add);
+                initializeRod(n_to_add);
             }
         }
     }
