@@ -102,7 +102,7 @@ static void makeConfigWindow()
         {
             if (rods.size() > 0)
             {
-                std::cout << rods[0].getEdges().reshaped(3, Eigen::AutoSize) << "\n";
+                std::cout << rods[0].getEdges() << "\n";
             }
         }
     }
@@ -148,7 +148,7 @@ static void updateViewerData()
         const uint64_t rod_count = rods.size();
         for (uint64_t rod_index = 0; rod_index < rod_count; ++rod_index)
         {
-            Eigen::MatrixX3f vertex_positions = rods[rod_index].getVertexPositions().reshaped(3, Eigen::AutoSize).transpose();
+            Eigen::MatrixX3f vertex_positions = rods[rod_index].getVertexPositions().transpose();
 
             auto lines = polyscope::registerCurveNetworkLine("Centerline_" + std::to_string(rod_index), vertex_positions);
 

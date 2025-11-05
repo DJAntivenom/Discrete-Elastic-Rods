@@ -50,3 +50,5 @@ build_release
 
 # polyscope files
 *.ini
+
+CMakeUserPresets.json
