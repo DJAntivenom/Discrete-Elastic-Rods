@@ -11,7 +11,7 @@
 #include <PolyscopeCallback.hpp>
 #include <vector>
 
-/* Get rid of anyoing unused ... warinings */
+ /* Get rid of annoying unused ... warnings */
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 #pragma GCC diagnostic ignored "-Wunused-function"
@@ -56,6 +56,11 @@ static float centerline_radius = 0.02;
 static int n_to_add = 10;
 
 /**
+ * @brief Maximal number of iterations newton method can run for in one timestep.
+ */
+static int max_newton_iterations = 5;
+
+/**
  * \brief Written to by cout, see teebuffer below.
  */
 static std::ostringstream log_stream;
@@ -65,21 +70,42 @@ static std::ostringstream log_stream;
  */
 static void makeConfigWindow()
 {
-    ImGui::InputFloat("Time-step", &delta_time, 0.001);
-    ImGui::Checkbox("Draw centerline", &draw_centerline);
-    if (draw_centerline)
+    if (ImGui::CollapsingHeader("Simulation settings", ImGuiTreeNodeFlags_DefaultOpen))
     {
-        ImGui::DragFloat("Relative Radius", &centerline_radius, 0.01f, 0.f, 1.f);
-    }
-    if (rods.size() == 0)
-    {
-        ImGui::InputInt("Vertices n", &n_to_add);
-        if (ImGui::Button("Create Rod"))
+        ImGui::InputFloat("Time-step", &delta_time, 0.001);
+        ImGui::InputInt("Max number of newton iterations", &max_newton_iterations);
+
+        if (rods.size() == 0)
         {
-            rods.emplace_back(n_to_add);
+            ImGui::InputInt("Vertices n", &n_to_add);
+            if (ImGui::Button("Create Rod"))
+            {
+                rods.emplace_back(n_to_add);
+            }
         }
     }
-    ImGui::Checkbox("Automatic bounding-box", &polyscope::options::automaticallyComputeSceneExtents);
+
+    if (ImGui::CollapsingHeader("Visualization settings", ImGuiTreeNodeFlags_DefaultOpen))
+    {
+        ImGui::Checkbox("Draw centerline", &draw_centerline);
+        if (draw_centerline)
+        {
+            ImGui::DragFloat("Relative Radius", &centerline_radius, 0.01f, 0.f, 1.f);
+        }
+
+        ImGui::Checkbox("Automatic bounding-box", &polyscope::options::automaticallyComputeSceneExtents);
+    }
+
+    if (ImGui::CollapsingHeader("Debug settings", ImGuiTreeNodeFlags_DefaultOpen))
+    {
+        if (ImGui::Button("Print debug stuff"))
+        {
+            if (rods.size() > 0)
+            {
+                std::cout << rods[0].getEdges().reshaped(3, Eigen::AutoSize) << "\n";
+            }
+        }
+    }
 }
 
 /**
@@ -155,7 +181,7 @@ void polyscopeCallback()
     /// Main update of rods
     for (auto &rod : rods)
     {
-        rod.update(delta_time);
+        rod.update(delta_time, static_cast<size_t>(max_newton_iterations));
     }
 };
 

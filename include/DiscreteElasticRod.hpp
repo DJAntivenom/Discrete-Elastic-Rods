@@ -12,34 +12,42 @@ class DiscreteElasticRod
 {
 private:
     /**
-     * \brief Column-vector of stacked vertex positions, size 3*(n+2).
+     * \brief Matrix of vertex positionts, 3x(n+2)
+     *
+     * Stores positions as column vectors of all vertices (including boundaries).
      */
-    Eigen::VectorXf m_vertex_positions;
+    Eigen::Matrix3Xf m_vertex_positions;
 
-    /*
-     * \brief Column-vector of stacked vertex velocities, size 3*(n+2).
-    */
-    Eigen::VectorXf m_vertex_velocities;
+    /**
+     * \brief Matrix of vertex velocities, 3x(n+2)
+     *
+     * Stores velocities as column vectors of all vertices (including boundaries).
+     */
+    Eigen::Matrix3Xf m_vertex_velocities;
 
-    /*
-     * \brief Initial bishop frame vector at edge 0.
-    */
-    Eigen::Vector3f bishop_frame_vector;
+    /**
+     * \brief Initial bishop frame vector u at edge 0.
+     */
+    Eigen::Vector3f m_bishop_frame_vector;
 
-    /*
-     * \brief Angle of rotation for each edge compared to bishop frame.
-    */
+    /**
+     * \brief Angle of rotation theta for each edge compared to bishop frame.
+     *
+     * Dimension: (n+1)
+     */
     Eigen::VectorXf m_edge_theta;
 
     /**
-     * \brief Corresponds to (n+2) from the paper, i.e. count of all vertices.
+     * \brief Length of each edge, calculated in constructor
+     *
+     * Dimension: (n+1)
      */
-    uint64_t m_num_vertices;
+    Eigen::VectorXf m_edge_length;
 
-    /*
-     * \brief describes if boundary condition is clamped (true) or stressfree (false).    
-    */
-    bool is_clamped;
+    /**
+     * \brief Corresponds to n from the paper, i.e. count of all internal vertices.
+     */
+    uint64_t m_n;
 
 public:
     /**
@@ -47,37 +55,49 @@ public:
      * @param n The number of inner vertices. There will be 2 more vertices,
      *  corresponding to the constrained boundary vertices.
      */
-    DiscreteElasticRod(uint64_t n, bool clamped = false, float theta_zero = 0.f, float theta_n = 0.f);
+    DiscreteElasticRod(uint64_t n, float theta_zero = 0.f, float theta_n = 0.f);
     virtual ~DiscreteElasticRod() = default;
 
     /**
      * \brief Performs one timestep of the simulation.
      * \param delta_time The number of seconds that have passed since the last update.
      */
-    void update(double delta_time);
+    void update(double delta_time, size_t max_newton_iterations);
 
     /**
      * @brief Get the stacked vertex positions.
      * @return A column-vector of size 3*(n+2) with the positions of the vertices.
      */
-    inline const Eigen::VectorXf &getVertexPositions() { return m_vertex_positions; }
+    inline const Eigen::Matrix3Xf &getVertexPositions() const { return m_vertex_positions; }
 
     /**
      * @brief Get the stacked vertex velocities.
      * @return A column-vector of size 3*(n+2) with the velocities of the vertices.
     */
-    inline const Eigen::VectorXf &getVertexVelocities() { return m_vertex_velocities; }
+    inline const Eigen::Matrix3Xf &getVertexVelocities() const { return m_vertex_velocities; }
 
     /**
     * @brief Get the stacked edge angles.
     * @return A column-vector of size n with the angles (compared to bishop from) of the vertices.
     */
-    inline const Eigen::VectorXf &getEdgeThetas() { return m_edge_theta; }
+    inline const Eigen::VectorXf &getEdgeThetas() const { return m_edge_theta; }
+
+    /**
+     * @brief Get $e_i$ from the paper, i.e. the vectors representing segments between vertices.
+     * @return
+     */
+    inline Eigen::Matrix3Xf getEdges() const
+    {
+        return m_vertex_positions.block(0, 1, 3, m_vertex_positions.cols() - 1)
+            - m_vertex_positions.block(0, 0, 3, m_vertex_positions.cols() - 1);
+    }
 
 private:
-    inline auto getVertex(uint64_t vertex_index) { return m_vertex_positions.segment<3>(3 * vertex_index); }
-    inline auto getVelocity(uint64_t vertex_index) { return m_vertex_velocities.segment<3>(3 * vertex_index); }
-    inline auto getTheta(uint64_t edge_index) { return m_edge_theta(edge_index); }
+    void doSymplecticEuler(double delta_time);
+
+    void transportBishopFrame();
+
+    void applyTwist(size_t max_newton_iterations);
 };
 
 #endif
