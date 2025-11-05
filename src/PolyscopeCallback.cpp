@@ -221,16 +221,6 @@ static void updateViewerData()
     }
 
     polyscope::removeAllStructures();
-    // auto points = polyscope::registerPointCloud("Points" + std::to_string(i), curr_data.points);
-    // auto color = points->addColorQuantity("Color", curr_data.points_c);
-    // color->setEnabled(true);
-
-    // points->setPointRadius(curr_data.point_size);
-    // if (curr_data.points_quad)
-    // {
-    //     points->setPointRenderMode(polyscope::PointRenderMode::Quad);
-    // }
-    // points->setTransparency(curr_data.alpha);
 
     if (draw_centerline)
     {
@@ -251,6 +241,19 @@ static void updateViewerData()
         pointcloud->setPointRadius(0.03); // TODO: Make this a constant
         auto pointcloud_color = pointcloud->addColorQuantity("Color", handle_colors);
         pointcloud_color->setEnabled(true);
+    }
+
+    if (!ImGui::GetIO().WantCaptureMouse)
+    {
+        if (ImGui::IsMouseClicked(ImGuiMouseButton_Left, false))
+        {
+            // Find nearest handle
+            ImVec2 imgui_mouse_pos = ImGui::GetIO().MousePos;
+
+            polyscope::PickResult pick_result = polyscope::pickAtScreenCoords(glm::vec2(imgui_mouse_pos.x, imgui_mouse_pos.y));
+
+            std::cout << pick_result.structureName << std::endl;
+        }
     }
 }
 
