@@ -20,6 +20,16 @@
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Release"
             }
+        },
+        {
+            "name": "debug_ninja",
+            "inherits": "debug",
+            "generator": "Ninja",
+            "description": "Debug Build using ninja",
+            "binaryDir": "build_debug",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
         }
     ]
 }
