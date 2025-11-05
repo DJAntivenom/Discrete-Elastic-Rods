@@ -97,17 +97,21 @@ static void update_rod_handles(int rod_index)
 
     Eigen::MatrixX3f vertex_positions = rods[rod_index].getVertexPositions().reshaped(3, Eigen::AutoSize).transpose();
 
+    Eigen::Vector3f direction_handle_dir = (vertex_positions.row(1) - vertex_positions.row(0)).normalized() * direction_offset;
+    Eigen::Vector3f orientation_handle_dir = (vertex_positions.row(1) - vertex_positions.row(0)).normalized() * direction_offset;
+
     // TODO: Cleanup duplication here, initialize rotation handles too
-    // Handle 1: Start position handle, head of the rod
-    handles(rod_index, Eigen::seq(0, 2)) = vertex_positions.row(0);
-    // Handle 2: Start direction handle, offset from the head
-    handles(rod_index + 1, Eigen::seq(0, 2)) = vertex_positions.row(0) - (vertex_positions.row(1) - vertex_positions.row(0)).normalized() * direction_offset;
+    int i = 0;
+    // Start position handle, head of the rod
+    handles(rod_index + i++, Eigen::seq(0, 2)) = vertex_positions.row(0);
+    // Start direction handle, offset from the head
+    handles(rod_index + i++, Eigen::seq(0, 2)) = vertex_positions.row(0) - direction_handle_dir;
 
     int verts = vertex_positions.rows();
-    // Handle 3: End position handle, tail of the rod
-    handles(rod_index + 2, Eigen::seq(0, 2)) = vertex_positions.row(verts - 1);
-    // Handle 4: End direction handle, offset from the tail
-    handles(rod_index + 3, Eigen::seq(0, 2)) = vertex_positions.row(verts - 1) - (vertex_positions.row(verts - 2) - vertex_positions.row(verts - 1)).normalized() * direction_offset;
+    // End position handle, tail of the rod
+    handles(rod_index + i++, Eigen::seq(0, 2)) = vertex_positions.row(verts - 1);
+    // End direction handle, offset from the tail
+    handles(rod_index + i++, Eigen::seq(0, 2)) = vertex_positions.row(verts - 1) - direction_handle_dir;
 }
 
 /**
