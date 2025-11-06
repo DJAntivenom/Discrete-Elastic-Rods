@@ -36,6 +36,11 @@
 static std::vector<DiscreteElasticRod> rods;
 
 /**
+ * @brief Controlled in the UI, if false not simulation is happening.
+ */
+static bool is_simulation_running = false;
+
+/**
  * \brief Size of the timestep in seconds.
  */
 static float delta_time = 0.001;
@@ -83,6 +88,8 @@ static void makeConfigWindow()
                 rods.emplace_back(n_to_add);
             }
         }
+
+        ImGui::Checkbox("Run simulation", &is_simulation_running);
     }
 
     if (ImGui::CollapsingHeader("Visualization settings", ImGuiTreeNodeFlags_DefaultOpen))
@@ -179,9 +186,12 @@ void polyscopeCallback()
     updateViewerData();
 
     /// Main update of rods
-    for (auto &rod : rods)
+    if (is_simulation_running)
     {
-        rod.update(delta_time, static_cast<size_t>(max_newton_iterations));
+        for (auto &rod : rods)
+        {
+            rod.update(delta_time, static_cast<size_t>(max_newton_iterations));
+        }
     }
 };
 
