@@ -84,12 +84,21 @@ public:
 
     /**
      * @brief Get $e_i$ from the paper, i.e. the vectors representing segments between vertices.
-     * @return
+     * @return A matrix, where each of the (n+1) columns is one edge.
      */
     inline Eigen::Matrix3Xf getEdges() const
     {
         return m_vertex_positions.block(0, 1, 3, m_vertex_positions.cols() - 1)
             - m_vertex_positions.block(0, 0, 3, m_vertex_positions.cols() - 1);
+    }
+
+    /**
+     * \brief Get $t_i$ from the paper, i.e. discrete tangents.
+     * \return A matrix, where each of the (n+1) columns is one tangent.
+     */
+    inline Eigen::Matrix3Xf getTangents() const
+    {
+        return getEdges().colwise().normalized();
     }
 
 private:
