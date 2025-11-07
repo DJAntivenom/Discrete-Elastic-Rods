@@ -57,6 +57,11 @@ static Eigen::MatrixXf handles;
 static Eigen::MatrixXf handle_colors;
 
 /**
+ * \brief Currently dragged handle. -1 for none.
+ */
+static int current_handle = -1;
+
+/**
  * \brief Size of the timestep in seconds.
  */
 static float delta_time = 0.001;
@@ -235,24 +240,70 @@ static void updateViewerData()
         }
     }
 
+    const double handle_radius = 0.03;
+    const std::string handle_structure_name = "Handles";
+
     if (draw_handles && !rods.empty())
     {
-        auto pointcloud = polyscope::registerPointCloud("Handles", handles);
-        pointcloud->setPointRadius(0.03); // TODO: Make this a constant
+        auto pointcloud = polyscope::registerPointCloud(handle_structure_name, handles);
+        pointcloud->setPointRadius(handle_radius);
         auto pointcloud_color = pointcloud->addColorQuantity("Color", handle_colors);
         pointcloud_color->setEnabled(true);
     }
 
     if (!ImGui::GetIO().WantCaptureMouse)
     {
+        // Move currently selected handle accoring to the mouse delta
+        if (current_handle != -1)
+        {
+            glm::vec3 camera_look_direction;
+            glm::vec3 camera_up_direction;
+            glm::vec3 camera_right_direction;
+            polyscope::view::getCameraFrame(camera_look_direction, camera_up_direction, camera_right_direction);
+
+            std::cout << "Look: " << camera_look_direction.x << std::endl;
+        }
+
+        // Check if we are clicking to select a handle
         if (ImGui::IsMouseClicked(ImGuiMouseButton_Left, false))
         {
+            // Clear out old handle selection, if exists
+            current_handle = -1;
+
             // Find nearest handle
             ImVec2 imgui_mouse_pos = ImGui::GetIO().MousePos;
 
             polyscope::PickResult pick_result = polyscope::pickAtScreenCoords(glm::vec2(imgui_mouse_pos.x, imgui_mouse_pos.y));
+            if (pick_result.isHit && pick_result.structureName == handle_structure_name)
+            {
+                Eigen::Vector3f hit_location(pick_result.position.x, pick_result.position.y, pick_result.position.z);
 
-            std::cout << pick_result.structureName << std::endl;
+                // Look for handle at the same position, since we cannot tell from the pick result directly.
+                const uint64_t handles_size = handles.rows();
+                for (uint64_t handle_index = 0; handle_index < handles_size; handle_index++)
+                {
+                    float distance = (hit_location - handles.row(handle_index).transpose()).norm();
+                    // Note: Distance is typically 1.3ish times the handle radius. 2x should detect but not generate false-positives
+                    // No idea why it's larger than the radius.
+                    if (distance < 2 * handle_radius)
+                    {
+                        current_handle = handle_index;
+                        // Disable camera rotation
+                        glm::mat4 view_matrix = polyscope::view::getCameraViewMatrix();
+                        polyscope::view::setNavigateStyle(polyscope::NavigateStyle::None);
+                        polyscope::view::setCameraViewMatrix(view_matrix);
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (ImGui::IsMouseReleased(ImGuiMouseButton_Left))
+        {
+            // Set handle not controlled
+            current_handle = -1;
+            // Re-enable camera rotation
+            polyscope::view::setNavigateStyle(polyscope::NavigateStyle::Turntable);
         }
     }
 }
