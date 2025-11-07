@@ -31,6 +31,15 @@ private:
     Eigen::Vector3f m_bishop_frame_vector;
 
     /**
+     * \brief Column i is bishop-frame vector u_i.
+     *
+     * Dimension: 3 x (n+1)
+     *
+     * The frames are updated after every update step in `transportBishopFrame`.
+     */
+    Eigen::Matrix3Xf m_bishop_frame;
+
+    /**
      * \brief Angle of rotation theta for each edge compared to bishop frame.
      *
      * Dimension: (n+1)
@@ -43,6 +52,11 @@ private:
      * Dimension: (n+1)
      */
     Eigen::VectorXf m_edge_length;
+
+    /**
+     * \brief The total length of the rod.
+     */
+    float m_total_rod_length;
 
     /**
      * \brief Corresponds to n from the paper, i.e. count of all internal vertices.
@@ -71,16 +85,26 @@ public:
     inline const Eigen::Matrix3Xf &getVertexPositions() const { return m_vertex_positions; }
 
     /**
-     * @brief Get the stacked vertex velocities.
-     * @return A column-vector of size 3*(n+2) with the velocities of the vertices.
-    */
+     * @brief Get the vertex velocities.
+     * @return A matrix of size 3x(n+2) with the velocities of the vertices.
+     */
     inline const Eigen::Matrix3Xf &getVertexVelocities() const { return m_vertex_velocities; }
+
+    /**
+     * \brief Get u_i in the columns of the returned matrix.
+     */
+    inline const Eigen::Matrix3Xf &getBishopFrame() const { return m_bishop_frame; }
 
     /**
     * @brief Get the stacked edge angles.
     * @return A column-vector of size n with the angles (compared to bishop from) of the vertices.
     */
     inline const Eigen::VectorXf &getEdgeThetas() const { return m_edge_theta; }
+
+    /**
+     * \brief Get the lengths of the edges.
+     */
+    inline const Eigen::VectorXf &getEdgeLengths() const { return m_edge_length; }
 
     /**
      * @brief Get $e_i$ from the paper, i.e. the vectors representing segments between vertices.
@@ -137,6 +161,23 @@ public:
         }
         return binormals;
     }
+
+    /**
+     * \brief Get the bishop frame {x, u, v} at alpha along the rod.
+     *
+     * The frame is represented in reduced form as a 3x3 matrix, where
+     * the first row is x, the second is u and the third row is v.
+     * \param alpha The ratio describing how far along the rod the frame
+     * should be interpolated.
+     * \return The position x interpolated along the rod in the first row
+     * followed by u and v.
+     */
+    Eigen::Matrix3f getInterpolatedBishopFrame(double alpha);
+
+    /**
+     * \brief Randomize the positions of the vertices within an area around the initial position.
+     */
+    void randomizeVertexPositions();
 
 private:
     void doSymplecticEuler(double delta_time);

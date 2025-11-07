@@ -9,6 +9,8 @@
 #include <DiscreteElasticRod.hpp>
 #include <Eigen/Eigen>
 #include <PolyscopeCallback.hpp>
+#include <chrono>
+#include <cmath>
 #include <vector>
 
  /* Get rid of annoying unused ... warnings */
@@ -41,9 +43,19 @@ static std::vector<DiscreteElasticRod> rods;
 static bool is_simulation_running = false;
 
 /**
+ * @brief Controlled in the UI, if true two vectors visualizing the bishop frame are drawn.
+ */
+static bool is_bishop_frame_animated = false;
+
+/**
  * \brief Size of the timestep in seconds.
  */
 static float delta_time = 0.001;
+
+/**
+ * @brief How many seconds the bishop frame takes to traverse the rod once.
+ */
+static float bishop_frame_animation_time = 2.f;
 
 /**
  * @brief If true, the centerline will be drawn and the frame is transparent.
@@ -58,7 +70,7 @@ static float centerline_radius = 0.02;
 /**
  * @brief Number of vertices to add.
  */
-static int n_to_add = 10;
+static int n_to_add = 9;
 
 /**
  * @brief Maximal number of iterations newton method can run for in one timestep.
@@ -109,9 +121,31 @@ static void makeConfigWindow()
         {
             if (rods.size() > 0)
             {
+                std::cout << "positions: \n";
+                std::cout << rods[0].getVertexPositions() << "\n";
+                std::cout << "edges: \n";
                 std::cout << rods[0].getEdges() << "\n";
+                std::cout << "tangents: \n";
+                std::cout << rods[0].getTangents() << "\n";
+                std::cout << "lengths: \n";
+                std::cout << rods[0].getEdgeLengths().transpose() << "\n";
+                std::cout << "u_i: \n";
+                std::cout << rods[0].getBishopFrame() << "\n";
             }
         }
+
+        if (ImGui::Button("Randomize vertex positions"))
+        {
+            for (auto &rod : rods)
+            {
+                rod.randomizeVertexPositions();
+            }
+        }
+
+        ImGui::InputFloat("Bishop frame visualization time [s]", &bishop_frame_animation_time, 0.1f);
+        ImGui::Checkbox("Animate bishop frame", &is_bishop_frame_animated);
+        ImGui::Text("Color u: Red");
+        ImGui::Text("Color v: Blue");
     }
 }
 
@@ -155,11 +189,39 @@ static void updateViewerData()
         const uint64_t rod_count = rods.size();
         for (uint64_t rod_index = 0; rod_index < rod_count; ++rod_index)
         {
-            Eigen::MatrixX3f vertex_positions = rods[rod_index].getVertexPositions().transpose();
+            const Eigen::MatrixX3f vertex_positions = rods[rod_index].getVertexPositions().transpose();
 
             auto lines = polyscope::registerCurveNetworkLine("Centerline_" + std::to_string(rod_index), vertex_positions);
 
             lines->setRadius(centerline_radius);
+        }
+    }
+
+    if (is_bishop_frame_animated)
+    {
+        const double current_time = std::chrono::duration<double>(
+            std::chrono::steady_clock::now().time_since_epoch()
+        ).count();
+        const double alpha = std::min(1.,
+                                      std::fmod(current_time, bishop_frame_animation_time) / bishop_frame_animation_time);
+
+        const uint64_t rod_count = rods.size();
+        for (uint64_t rod_index = 0; rod_index < rod_count; ++rod_index)
+        {
+            const auto bishop_frame = rods[rod_index].getInterpolatedBishopFrame(alpha);
+
+            Eigen::Matrix<float, 2, 3> u;
+            u.row(0) = bishop_frame.row(0);
+            u.row(1) = bishop_frame.row(0) + bishop_frame.row(1);
+            Eigen::Matrix<float, 2, 3> v;
+            v.row(0) = bishop_frame.row(0);
+            v.row(1) = bishop_frame.row(0) + bishop_frame.row(2);
+
+            auto u_line = polyscope::registerCurveNetworkLine("Bishop_u_" + std::to_string(rod_index), u);
+            auto v_line = polyscope::registerCurveNetworkLine("Bishop_v_" + std::to_string(rod_index), v);
+
+            u_line->setRadius(centerline_radius * 0.5f)->setColor({ 1.f, 0.f, 0.f });
+            v_line->setRadius(centerline_radius * 0.5f)->setColor({ 0.f, 0.f, 1.f });
         }
     }
 }
