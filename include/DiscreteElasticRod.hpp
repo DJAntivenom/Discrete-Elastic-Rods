@@ -88,8 +88,8 @@ public:
      */
     inline Eigen::Matrix3Xf getEdges() const
     {
-        return m_vertex_positions.block(0, 1, 3, m_vertex_positions.cols() - 1)
-            - m_vertex_positions.block(0, 0, 3, m_vertex_positions.cols() - 1);
+        return m_vertex_positions.block(0, 1, 3, m_n + 1)
+            - m_vertex_positions.block(0, 0, 3, m_n + 1);
     }
 
     /**
@@ -99,6 +99,43 @@ public:
     inline Eigen::Matrix3Xf getTangents() const
     {
         return getEdges().colwise().normalized();
+    }
+
+    /**
+     * @brief Get kappa_i from the paper, i.e. discrete curvature at vertices.
+     * @return A vector of length n containing discrete curvature at each inner vertex.
+     */
+    Eigen::VectorXf getCurvature() const
+    {
+        const auto edges = getTangents();
+
+        /* there is no per-column dot product function => do dot-product "by hand" */
+        const auto angles = (edges.block(0, 0, 3, m_n).array() *
+                             edges.block(0, 1, 3, m_n).array()).colwise().sum().acos();
+
+        /* don't forget to go back to matrices, like I initially did ^^ */
+        return 2. * (angles * 0.5).tan().matrix();
+    }
+
+    /**
+     * @brief Get (kb)_i from the paper, i.e. discrete curvature binormal.
+     * @return A 3 x n matrix, where column i is the binormal at inner vertex i, i.e.
+     * global vertex (i+1), because our boundary vertex is 0.
+     */
+    Eigen::Matrix3Xf getBinormals() const {
+        /* instead of normalizing the corss-product and scaling by curvature,
+           we use (1) from the paper which is robust if edges are collinear
+           (normalizing of a 0-vector, i.e. result of collinear x-product, is
+           undefined)*/
+        const auto edges = getEdges();
+        Eigen::Matrix3Xf binormals(3, m_n);
+        for (uint32_t col_index = 0; col_index < m_n; ++col_index)
+        {
+            binormals.col(col_index) = 2 * edges.col(col_index).cross(edges.col(col_index + 1));
+            binormals.col(col_index) *= 1 / (edges.col(col_index).norm() * edges.col(col_index + 1).norm() +
+                                             edges.col(col_index).dot(edges.col(col_index + 1)));
+        }
+        return binormals;
     }
 
 private:
