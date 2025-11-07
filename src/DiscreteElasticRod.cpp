@@ -54,3 +54,8 @@ void DiscreteElasticRod::update(double delta_time, size_t max_newton_iterations)
     /// => Use newton solver from exercises
     applyTwist(max_newton_iterations);
 }
+
+void DiscreteElasticRod::setVertexPosition(uint64_t vertex_index, const Eigen::Vector3f &new_position)
+{
+    m_vertex_positions.col(vertex_index) = new_position;
+}

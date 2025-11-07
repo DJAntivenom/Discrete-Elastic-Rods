@@ -71,6 +71,11 @@ public:
     inline const Eigen::Matrix3Xf &getVertexPositions() const { return m_vertex_positions; }
 
     /**
+     * @brief Set vertex position.
+     */
+    void setVertexPosition(uint64_t vertex_index, const Eigen::Vector3f &new_position);
+
+    /**
      * @brief Get the stacked vertex velocities.
      * @return A column-vector of size 3*(n+2) with the velocities of the vertices.
     */

@@ -51,8 +51,9 @@ const int handles_count = 6;
 static Eigen::MatrixXf handles;
 
 /**
- * \brief The colors for the handles. Must correspond to the
- * dimension of handles.
+ * \brief The colors for the handles
+ *
+ * Must correspond to the dimension and content of handles.
  */
 static Eigen::MatrixXf handle_colors;
 
@@ -101,31 +102,34 @@ static std::ostringstream log_stream;
  */
 static void updateRodHandles(int rod_index)
 {
-    // TODO: Make point sizes, distances, colors into a const?
     const float direction_offset = 0.2f;
     const float rotation_offset = 0.1f;
 
     Eigen::MatrixX3f vertex_positions = rods[rod_index].getVertexPositions().reshaped(3, Eigen::AutoSize).transpose();
 
-    Eigen::RowVector3f direction_handle_dir = -(vertex_positions.row(1) - vertex_positions.row(0)).normalized() * direction_offset;
-    Eigen::RowVector3f orientation_handle_dir = Eigen::RowVector3f(-direction_handle_dir[1], direction_handle_dir[0], 0).normalized() * rotation_offset; // Any possible normal vector
+    Eigen::RowVector3f direction_handle_dir_start = -(vertex_positions.row(1) - vertex_positions.row(0)).normalized() * direction_offset;
+    Eigen::RowVector3f orientation_handle_dir_start = Eigen::RowVector3f(-direction_handle_dir_start[1], direction_handle_dir_start[0], 0).normalized() * rotation_offset; // Any possible normal vector
+    // TODO: Show a Kirchoff natural frame vector instead for the orientation
 
-    // TODO: Cleanup duplication here, initialize rotation handles too
+    uint64_t vertex_count = vertex_positions.rows();
+    Eigen::RowVector3f direction_handle_dir_end = -(vertex_positions.row(vertex_count - 1) - vertex_positions.row(vertex_count - 2)).normalized() * direction_offset;
+    Eigen::RowVector3f orientation_handle_dir_end = Eigen::RowVector3f(-direction_handle_dir_end[1], direction_handle_dir_end[0], 0).normalized() * rotation_offset;
+
     int i = 0;
     // Start position handle, head of the rod
     handles(rod_index + i++, Eigen::seq(0, 2)) = vertex_positions.row(0);
     // Start direction handle, offset from the head
-    handles(rod_index + i++, Eigen::seq(0, 2)) = vertex_positions.row(0) + direction_handle_dir;
+    handles(rod_index + i++, Eigen::seq(0, 2)) = vertex_positions.row(0) + direction_handle_dir_start;
     // Rotation setting, offset to the side
-    handles(rod_index + i++, Eigen::seq(0, 2)) = vertex_positions.row(0) + orientation_handle_dir;
+    handles(rod_index + i++, Eigen::seq(0, 2)) = vertex_positions.row(0) + orientation_handle_dir_start;
 
     int verts = vertex_positions.rows();
     // End position handle, tail of the rod
     handles(rod_index + i++, Eigen::seq(0, 2)) = vertex_positions.row(verts - 1);
     // End direction handle, offset from the tail
-    handles(rod_index + i++, Eigen::seq(0, 2)) = vertex_positions.row(verts - 1) - direction_handle_dir;
+    handles(rod_index + i++, Eigen::seq(0, 2)) = vertex_positions.row(verts - 1) - direction_handle_dir_end;
     // Rotation setting, offset to the side
-    handles(rod_index + i++, Eigen::seq(0, 2)) = vertex_positions.row(verts - 1) + orientation_handle_dir;
+    handles(rod_index + i++, Eigen::seq(0, 2)) = vertex_positions.row(verts - 1) + orientation_handle_dir_end;
 }
 
 /**
@@ -156,6 +160,54 @@ static void initializeRod(int n_vertices)
     handle_colors(handles.rows() - 5, Eigen::seq(0, 2)) = handle_colors(handles.rows() - 2, Eigen::seq(0, 2)) = Eigen::Vector3f(1.0, 0.0, 0.0).transpose();
     // Green for the orientation
     handle_colors(handles.rows() - 4, Eigen::seq(0, 2)) = handle_colors(handles.rows() - 1, Eigen::seq(0, 2)) = Eigen::Vector3f(0.0, 1.0, 0.0).transpose();
+}
+
+/**
+ * \brief Tries applying handle update to the rod
+ *
+ * TODO: Should this apply a force?
+ */
+static void applyHandleUpdate(uint64_t handle_index, const Eigen::Vector3f &new_position)
+{
+    uint64_t handle_type = handle_index % handles_count;
+    uint64_t rod_index = handle_index / handles_count;
+
+    // TODO: Add other handles
+    switch (handle_type)
+    {
+    case 0:
+        rods[rod_index].setVertexPosition(0, new_position);
+        updateRodHandles(rod_index);
+        break;
+    case 3:
+        rods[rod_index].setVertexPosition(rods[rod_index].getVertexPositions().cols() - 1, new_position);
+        updateRodHandles(rod_index);
+        break;
+    default:
+        break;
+    }
+}
+
+static Eigen::Vector3f findNearestPointToRay(const Eigen::Vector3f &origin, const Eigen::Vector3f &direction, const Eigen::Vector3f &point)
+{
+    float t = (point - origin).dot(direction);
+    return origin + t * direction;
+}
+
+/**
+ * \brief Convert screen coordinates to world position
+ *
+ * Source: polyscope::view::screenCoordsToWorldRay
+ * Shortened to return its intermediate value, `worldPos`.
+ */
+Eigen::Vector3f screenCoordsToWorldPos(glm::vec2 screenCoords) {
+    auto view = polyscope::view::getCameraViewMatrix();
+    auto proj = polyscope::view::getCameraPerspectiveMatrix();
+    glm::vec4 viewport = { 0., 0., polyscope::view::windowWidth, polyscope::view::windowHeight };
+
+    glm::vec3 screenPos3{ screenCoords.x, polyscope::view::windowHeight - screenCoords.y, 0. };
+    auto worldPos = glm::unProject(screenPos3, view, proj, viewport);
+    return Eigen::Vector3f(worldPos.x, worldPos.y, worldPos.z);
 }
 
 /**
@@ -246,7 +298,7 @@ static void updateViewerData()
     if (draw_handles && !rods.empty())
     {
         auto pointcloud = polyscope::registerPointCloud(handle_structure_name, handles);
-        pointcloud->setPointRadius(handle_radius);
+        pointcloud->setPointRadius(handle_radius, false);
         auto pointcloud_color = pointcloud->addColorQuantity("Color", handle_colors);
         pointcloud_color->setEnabled(true);
     }
@@ -256,12 +308,37 @@ static void updateViewerData()
         // Move currently selected handle accoring to the mouse delta
         if (current_handle != -1)
         {
-            glm::vec3 camera_look_direction;
-            glm::vec3 camera_up_direction;
-            glm::vec3 camera_right_direction;
-            polyscope::view::getCameraFrame(camera_look_direction, camera_up_direction, camera_right_direction);
+            // Camera and Mouse parameters
+            ImVec2 imgui_mouse_screen_pos = ImGui::GetIO().MousePos;
+            glm::vec2 poly_mouse_screen_pos(imgui_mouse_screen_pos.x, imgui_mouse_screen_pos.y);
+            ImVec2 imgui_mouse_screen_pos_prev = ImGui::GetIO().MousePosPrev;
+            glm::vec2 poly_mouse_screen_pos_prev(imgui_mouse_screen_pos_prev.x, imgui_mouse_screen_pos_prev.y);
 
-            std::cout << "Look: " << camera_look_direction.x << std::endl;
+            Eigen::Vector3f mouse_position = screenCoordsToWorldPos(poly_mouse_screen_pos);
+            Eigen::Vector3f mouse_position_prev = screenCoordsToWorldPos(poly_mouse_screen_pos_prev);
+
+            glm::vec3 poly_mouse_direction = polyscope::view::screenCoordsToWorldRay(poly_mouse_screen_pos);
+            Eigen::Vector3f mouse_direction(poly_mouse_direction.x, poly_mouse_direction.y, poly_mouse_direction.z);
+            glm::vec3 poly_mouse_direction_prev = polyscope::view::screenCoordsToWorldRay(poly_mouse_screen_pos_prev);
+            Eigen::Vector3f mouse_direction_prev(poly_mouse_direction_prev.x, poly_mouse_direction_prev.y, poly_mouse_direction_prev.z);
+
+            auto handle = handles.row(current_handle);
+
+            // Find the distance by how much to move the point
+            // First, find the nearest point to the handle on the current and previous mouse ray. Then, move the handle by that distance.
+
+            Eigen::Vector3f mouse_closest_point = findNearestPointToRay(mouse_position, mouse_direction, handle);
+            Eigen::Vector3f mouse_closest_point_prev = findNearestPointToRay(mouse_position_prev, mouse_direction_prev, handle);
+
+            // Raw mouse delta
+            Eigen::Vector3f mouse_delta = mouse_closest_point - mouse_closest_point_prev;
+            // Normalize this to be perpendicular to the current mouse direction
+            // TODO: Validate that this feels good to move stuff with
+            mouse_delta = mouse_delta - mouse_delta.dot(mouse_direction) * mouse_direction;
+
+            Eigen::Vector3f new_position = handle + (mouse_delta).transpose();
+
+            applyHandleUpdate(current_handle, new_position);
         }
 
         // Check if we are clicking to select a handle
@@ -272,7 +349,6 @@ static void updateViewerData()
 
             // Find nearest handle
             ImVec2 imgui_mouse_pos = ImGui::GetIO().MousePos;
-
             polyscope::PickResult pick_result = polyscope::pickAtScreenCoords(glm::vec2(imgui_mouse_pos.x, imgui_mouse_pos.y));
             if (pick_result.isHit && pick_result.structureName == handle_structure_name)
             {
@@ -289,9 +365,7 @@ static void updateViewerData()
                     {
                         current_handle = handle_index;
                         // Disable camera rotation
-                        glm::mat4 view_matrix = polyscope::view::getCameraViewMatrix();
-                        polyscope::view::setNavigateStyle(polyscope::NavigateStyle::None);
-                        polyscope::view::setCameraViewMatrix(view_matrix);
+                        polyscope::state::doDefaultMouseInteraction = false;
                         break;
                     }
                 }
@@ -303,7 +377,7 @@ static void updateViewerData()
             // Set handle not controlled
             current_handle = -1;
             // Re-enable camera rotation
-            polyscope::view::setNavigateStyle(polyscope::NavigateStyle::Turntable);
+            polyscope::state::doDefaultMouseInteraction = true;
         }
     }
 }
