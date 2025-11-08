@@ -68,4 +68,6 @@ void DiscreteElasticRod::update(double delta_time, size_t max_newton_iterations)
 void DiscreteElasticRod::randomizeVertexPositions()
 {
     m_vertex_positions.block(1, 0, 2, m_n + 2).setRandom() *= 0.1f;
+
+    transportBishopFrame();
 }
