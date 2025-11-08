@@ -39,6 +39,14 @@
 static std::vector<DiscreteElasticRod> rods;
 
 /**
+ * \brief The start and end thetas configured in the UI.
+ *
+ * Dimension 2 x rods.size(). The n-th column has the
+ * start and end theta for the n-th rod.
+ */
+static Eigen::Matrix2Xf rod_thetas;
+
+/**
  * \brief Number of handles per rod.
  */
 const int handles_count = 6;
@@ -123,14 +131,22 @@ static void updateRodHandles(int rod_index)
     const float rotation_offset = 0.1f;
 
     Eigen::MatrixX3f vertex_positions = rods[rod_index].getVertexPositions().reshaped(3, Eigen::AutoSize).transpose();
+    Eigen::VectorXf edge_thetas = rods[rod_index].getEdgeThetas();
 
-    Eigen::RowVector3f direction_handle_dir_start = -(vertex_positions.row(1) - vertex_positions.row(0)).normalized() * direction_offset;
-    Eigen::RowVector3f orientation_handle_dir_start = Eigen::RowVector3f(-direction_handle_dir_start[1], direction_handle_dir_start[0], 0).normalized() * rotation_offset; // Any possible normal vector
-    // TODO: Show a Kirchoff natural frame vector instead for the orientation
-
+    // Direction indicator
     uint64_t vertex_count = vertex_positions.rows();
+    Eigen::RowVector3f direction_handle_dir_start = -(vertex_positions.row(1) - vertex_positions.row(0)).normalized() * direction_offset;
     Eigen::RowVector3f direction_handle_dir_end = -(vertex_positions.row(vertex_count - 1) - vertex_positions.row(vertex_count - 2)).normalized() * direction_offset;
-    Eigen::RowVector3f orientation_handle_dir_end = Eigen::RowVector3f(-direction_handle_dir_end[1], direction_handle_dir_end[0], 0).normalized() * rotation_offset;
+
+    // TODO: Show a Kirchoff natural frame vector instead for the orientation
+    // Orientation: Create any normal vector, then rotate by edge theta
+    Eigen::RowVector3f orientation_handle_dir_start_base = Eigen::RowVector3f(-direction_handle_dir_start[1], direction_handle_dir_start[0], 0).normalized() * rotation_offset;
+    Eigen::Transform<float, 3, Eigen::Affine> rotation_start(Eigen::AngleAxisf(edge_thetas[0], direction_handle_dir_start.normalized()));
+    Eigen::RowVector3f orientation_handle_dir_start = (rotation_start.linear() * orientation_handle_dir_start_base.transpose()).transpose();
+
+    Eigen::RowVector3f orientation_handle_dir_end_base = Eigen::RowVector3f(-direction_handle_dir_end[1], direction_handle_dir_end[0], 0);
+    Eigen::Transform<float, 3, Eigen::Affine> rotation_end(Eigen::AngleAxisf(edge_thetas[edge_thetas.size() - 1], direction_handle_dir_end.normalized()));
+    Eigen::RowVector3f orientation_handle_dir_end = (rotation_end.linear() * orientation_handle_dir_end_base.transpose()).transpose().normalized() * rotation_offset;
 
     int i = 0;
     // Start position handle, head of the rod
@@ -156,7 +172,12 @@ static void updateRodHandles(int rod_index)
  */
 static void initializeRod(int n_vertices)
 {
+    // Add rod
     rods.emplace_back(n_vertices);
+
+    // Initialize rotation frame
+    rod_thetas.resize(2, rod_thetas.cols() + 1);
+    rod_thetas.col(rod_thetas.cols() - 1).setZero();
 
     // Add the new handle positions
     handles.resize(handles.rows() + handles_count, 3);
@@ -181,23 +202,33 @@ static void initializeRod(int n_vertices)
 
 /**
  * \brief Tries applying handle update to the rod
- *
- * TODO: Should this apply a force?
  */
 static void applyHandleUpdate(uint64_t handle_index, const Eigen::Vector3f &new_position)
 {
     uint64_t handle_type = handle_index % handles_count;
     uint64_t rod_index = handle_index / handles_count;
 
+    Eigen::VectorXf edge_lengths = rods[rod_index].getEdgeLengths();
+    Eigen::Matrix3Xf vertex_positions = rods[rod_index].getVertexPositions();
+
+    float prev_length;
+    Eigen::Vector3f neighbour_position;
+
     // TODO: Add other handles
     switch (handle_type)
     {
     case 0:
-        rods[rod_index].setVertexPosition(0, new_position);
+        prev_length = edge_lengths[0];
+        neighbour_position = vertex_positions.col(1);
+        // Set position, but preserve length
+        rods[rod_index].setVertexPosition(0, neighbour_position + (new_position - neighbour_position).normalized() * prev_length);
         updateRodHandles(rod_index);
         break;
     case 3:
-        rods[rod_index].setVertexPosition(rods[rod_index].getVertexPositions().cols() - 1, new_position);
+        prev_length = edge_lengths[edge_lengths.size() - 1];
+        neighbour_position = vertex_positions.col(vertex_positions.cols() - 2);
+        // Set position, but preserve length
+        rods[rod_index].setVertexPosition(vertex_positions.cols() - 1, neighbour_position + (new_position - neighbour_position).normalized() * prev_length);
         updateRodHandles(rod_index);
         break;
     default:
@@ -245,6 +276,20 @@ static void makeConfigWindow()
                 initializeRod(n_to_add);
             }
         }
+        else
+        {
+            uint64_t rods_size = rods.size();
+            for (uint64_t rod_index = 0; rod_index < rods_size; rod_index++)
+            {
+                bool start_changed = ImGui::SliderAngle("Rod start", &rod_thetas(0, rod_index), 0);
+                bool end_changed = ImGui::SliderAngle("Rod end", &rod_thetas(1, rod_index), 0);
+                if (start_changed || end_changed)
+                {
+                    rods[rod_index].setBoundaryEdgeThetas(rod_thetas(0, rod_index), rod_thetas(1, rod_index));
+                    updateRodHandles(rod_index);
+                }
+            }
+        }
 
         ImGui::Checkbox("Run simulation", &is_simulation_running);
     }
@@ -282,9 +327,11 @@ static void makeConfigWindow()
 
         if (ImGui::Button("Randomize vertex positions"))
         {
-            for (auto &rod : rods)
+            uint64_t rods_size = rods.size();
+            for (uint64_t rod_index = 0; rod_index < rods_size; rod_index++)
             {
-                rod.randomizeVertexPositions();
+                rods[rod_index].randomizeVertexPositions();
+                updateRodHandles(rod_index);
             }
         }
 
@@ -374,7 +421,6 @@ static void updateViewerData()
             // Raw mouse delta
             Eigen::Vector3f mouse_delta = mouse_closest_point - mouse_closest_point_prev;
             // Normalize this to be perpendicular to the current mouse direction
-            // TODO: Validate that this feels good to move stuff with
             mouse_delta = mouse_delta - mouse_delta.dot(mouse_direction) * mouse_direction;
 
             Eigen::Vector3f new_position = handle + (mouse_delta).transpose();

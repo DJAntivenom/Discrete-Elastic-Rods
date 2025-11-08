@@ -107,6 +107,15 @@ public:
     inline const Eigen::VectorXf &getEdgeThetas() const { return m_edge_theta; }
 
     /**
+    * @brief Set the edge angle boundary conditions.
+    */
+    inline void setBoundaryEdgeThetas(float theta_start, float theta_end)
+    {
+        m_edge_theta[0] = theta_start;
+        m_edge_theta[m_edge_theta.size() - 1] = theta_end;
+    }
+
+    /**
      * \brief Get the lengths of the edges.
      */
     inline const Eigen::VectorXf &getEdgeLengths() const { return m_edge_length; }
