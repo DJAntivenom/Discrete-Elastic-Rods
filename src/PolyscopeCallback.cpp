@@ -138,7 +138,6 @@ static void updateRodHandles(int rod_index)
     Eigen::RowVector3f direction_handle_dir_start = -(vertex_positions.row(1) - vertex_positions.row(0)).normalized() * direction_offset;
     Eigen::RowVector3f direction_handle_dir_end = -(vertex_positions.row(vertex_count - 1) - vertex_positions.row(vertex_count - 2)).normalized() * direction_offset;
 
-    // TODO: Show a Kirchoff natural frame vector instead for the orientation
     // Orientation: Create any normal vector, then rotate by edge theta
     Eigen::RowVector3f orientation_handle_dir_start_base = Eigen::RowVector3f(-direction_handle_dir_start[1], direction_handle_dir_start[0], 0).normalized() * rotation_offset;
     Eigen::Transform<float, 3, Eigen::Affine> rotation_start(Eigen::AngleAxisf(edge_thetas[0], direction_handle_dir_start.normalized()));
