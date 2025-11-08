@@ -9,6 +9,7 @@
 #include <DiscreteElasticRod.hpp>
 #include <Eigen/Eigen>
 #include <PolyscopeCallback.hpp>
+#include <polyscopeHelper.hpp>
 #include <chrono>
 #include <cmath>
 #include <vector>
@@ -213,7 +214,6 @@ static void applyHandleUpdate(uint64_t handle_index, const Eigen::Vector3f &new_
     float prev_length;
     Eigen::Vector3f neighbour_position;
 
-    // TODO: Add other handles
     switch (handle_type)
     {
     case 0:
@@ -239,22 +239,6 @@ static Eigen::Vector3f findNearestPointToRay(const Eigen::Vector3f &origin, cons
 {
     float t = (point - origin).dot(direction);
     return origin + t * direction;
-}
-
-/**
- * \brief Convert screen coordinates to world position
- *
- * Source: polyscope::view::screenCoordsToWorldRay
- * Shortened to return its intermediate value, `worldPos`.
- */
-Eigen::Vector3f screenCoordsToWorldPos(glm::vec2 screenCoords) {
-    auto view = polyscope::view::getCameraViewMatrix();
-    auto proj = polyscope::view::getCameraPerspectiveMatrix();
-    glm::vec4 viewport = { 0., 0., polyscope::view::windowWidth, polyscope::view::windowHeight };
-
-    glm::vec3 screenPos3{ screenCoords.x, polyscope::view::windowHeight - screenCoords.y, 0. };
-    auto worldPos = glm::unProject(screenPos3, view, proj, viewport);
-    return Eigen::Vector3f(worldPos.x, worldPos.y, worldPos.z);
 }
 
 /**
@@ -401,8 +385,8 @@ static void updateViewerData()
             ImVec2 imgui_mouse_screen_pos_prev = ImGui::GetIO().MousePosPrev;
             glm::vec2 poly_mouse_screen_pos_prev(imgui_mouse_screen_pos_prev.x, imgui_mouse_screen_pos_prev.y);
 
-            Eigen::Vector3f mouse_position = screenCoordsToWorldPos(poly_mouse_screen_pos);
-            Eigen::Vector3f mouse_position_prev = screenCoordsToWorldPos(poly_mouse_screen_pos_prev);
+            Eigen::Vector3f mouse_position = polyscopeScreenCoordsToWorldPos(poly_mouse_screen_pos);
+            Eigen::Vector3f mouse_position_prev = polyscopeScreenCoordsToWorldPos(poly_mouse_screen_pos_prev);
 
             glm::vec3 poly_mouse_direction = polyscope::view::screenCoordsToWorldRay(poly_mouse_screen_pos);
             Eigen::Vector3f mouse_direction(poly_mouse_direction.x, poly_mouse_direction.y, poly_mouse_direction.z);
