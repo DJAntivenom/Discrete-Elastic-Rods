@@ -12,7 +12,7 @@ int main()
 
     polyscope::options::autocenterStructures = false;
     polyscope::options::autoscaleStructures = false;
-    polyscope::options::automaticallyComputeSceneExtents = true;
+    polyscope::options::automaticallyComputeSceneExtents = false;
     polyscope::view::farClipRatio = 50;
     polyscope::state::lengthScale = 1.;
     polyscope::view::setUpDir(polyscope::view::UpDir::YUp);

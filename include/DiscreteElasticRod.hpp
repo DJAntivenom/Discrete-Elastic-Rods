@@ -31,6 +31,15 @@ private:
     Eigen::Vector3f m_bishop_frame_vector;
 
     /**
+     * \brief Column i is bishop-frame vector u_i.
+     *
+     * Dimension: 3 x (n+1)
+     *
+     * The frames are updated after every update step in `transportBishopFrame`.
+     */
+    Eigen::Matrix3Xf m_bishop_frame;
+
+    /**
      * \brief Angle of rotation theta for each edge compared to bishop frame.
      *
      * Dimension: (n+1)
@@ -43,6 +52,11 @@ private:
      * Dimension: (n+1)
      */
     Eigen::VectorXf m_edge_length;
+
+    /**
+     * \brief The total length of the rod.
+     */
+    float m_total_rod_length;
 
     /**
      * \brief Corresponds to n from the paper, i.e. count of all internal vertices.
@@ -76,10 +90,15 @@ public:
     void setVertexPosition(uint64_t vertex_index, const Eigen::Vector3f &new_position);
 
     /**
-     * @brief Get the stacked vertex velocities.
-     * @return A column-vector of size 3*(n+2) with the velocities of the vertices.
-    */
+     * @brief Get the vertex velocities.
+     * @return A matrix of size 3x(n+2) with the velocities of the vertices.
+     */
     inline const Eigen::Matrix3Xf &getVertexVelocities() const { return m_vertex_velocities; }
+
+    /**
+     * \brief Get u_i in the columns of the returned matrix.
+     */
+    inline const Eigen::Matrix3Xf &getBishopFrame() const { return m_bishop_frame; }
 
     /**
     * @brief Get the stacked edge angles.
@@ -88,14 +107,82 @@ public:
     inline const Eigen::VectorXf &getEdgeThetas() const { return m_edge_theta; }
 
     /**
+     * \brief Get the lengths of the edges.
+     */
+    inline const Eigen::VectorXf &getEdgeLengths() const { return m_edge_length; }
+
+    /**
      * @brief Get $e_i$ from the paper, i.e. the vectors representing segments between vertices.
-     * @return
+     * @return A matrix, where each of the (n+1) columns is one edge.
      */
     inline Eigen::Matrix3Xf getEdges() const
     {
-        return m_vertex_positions.block(0, 1, 3, m_vertex_positions.cols() - 1)
-            - m_vertex_positions.block(0, 0, 3, m_vertex_positions.cols() - 1);
+        return m_vertex_positions.block(0, 1, 3, m_n + 1)
+            - m_vertex_positions.block(0, 0, 3, m_n + 1);
     }
+
+    /**
+     * \brief Get $t_i$ from the paper, i.e. discrete tangents.
+     * \return A matrix, where each of the (n+1) columns is one tangent.
+     */
+    inline Eigen::Matrix3Xf getTangents() const
+    {
+        return getEdges().colwise().normalized();
+    }
+
+    /**
+     * @brief Get kappa_i from the paper, i.e. discrete curvature at vertices.
+     * @return A vector of length n containing discrete curvature at each inner vertex.
+     */
+    Eigen::VectorXf getCurvature() const
+    {
+        const auto edges = getTangents();
+
+        /* there is no per-column dot product function => do dot-product "by hand" */
+        const auto angles = (edges.block(0, 0, 3, m_n).array() *
+                             edges.block(0, 1, 3, m_n).array()).colwise().sum().acos();
+
+        /* don't forget to go back to matrices, like I initially did ^^ */
+        return 2. * (angles * 0.5).tan().matrix();
+    }
+
+    /**
+     * @brief Get (kb)_i from the paper, i.e. discrete curvature binormal.
+     * @return A 3 x n matrix, where column i is the binormal at inner vertex i, i.e.
+     * global vertex (i+1), because our boundary vertex is 0.
+     */
+    Eigen::Matrix3Xf getBinormals() const {
+        /* instead of normalizing the corss-product and scaling by curvature,
+           we use (1) from the paper which is robust if edges are collinear
+           (normalizing of a 0-vector, i.e. result of collinear x-product, is
+           undefined)*/
+        const auto edges = getEdges();
+        Eigen::Matrix3Xf binormals(3, m_n);
+        for (uint32_t col_index = 0; col_index < m_n; ++col_index)
+        {
+            binormals.col(col_index) = 2 * edges.col(col_index).cross(edges.col(col_index + 1));
+            binormals.col(col_index) *= 1 / (edges.col(col_index).norm() * edges.col(col_index + 1).norm() +
+                                             edges.col(col_index).dot(edges.col(col_index + 1)));
+        }
+        return binormals;
+    }
+
+    /**
+     * \brief Get the bishop frame {x, u, v} at alpha along the rod.
+     *
+     * The frame is represented in reduced form as a 3x3 matrix, where
+     * the first row is x, the second is u and the third row is v.
+     * \param alpha The ratio describing how far along the rod the frame
+     * should be interpolated.
+     * \return The position x interpolated along the rod in the first row
+     * followed by u and v.
+     */
+    Eigen::Matrix3f getInterpolatedBishopFrame(double alpha);
+
+    /**
+     * \brief Randomize the positions of the vertices within an area around the initial position.
+     */
+    void randomizeVertexPositions();
 
 private:
     void doSymplecticEuler(double delta_time);

@@ -3,30 +3,42 @@
 #include <iostream>
 
 DiscreteElasticRod::DiscreteElasticRod(uint64_t n, float theta_zero, float theta_n) :
-    m_vertex_positions(3, (n + 2)), m_vertex_velocities(3, (n + 2)),
-    m_edge_theta(n + 1), m_n(n)
+    m_vertex_positions(3, (n + 2)),
+    m_vertex_velocities(3, (n + 2)),
+    m_bishop_frame(3, n + 1),
+    m_edge_theta(n + 1),
+    m_edge_length(n + 1),
+    m_n(n)
 {
-    Eigen::Vector3f start{ 0.f, 0.5f, 0.f };
+    Eigen::Vector3f start{ -0.5f, 0.f, 0.f };
     Eigen::Vector3f increment{ 0.1f, 0.0f, 0.0f };
     for (uint64_t i = 0; i < n + 2; ++i)
     {
         m_vertex_positions.col(i) = start + i * increment;
+        if (i > 0)
+            m_edge_length[i - 1] = 0.1;
     }
     m_bishop_frame_vector = Eigen::Vector3f(0.f, 0.f, 0.1f); //perpendicular to first edge
 
+    m_total_rod_length = m_edge_length.sum();
+
     m_vertex_velocities.setZero(); //starting at rest
+
+    /**
+     * TODO: once we don't just use naturally straigth rods anymore, this has to be done
+     * differently.
+     */
+    m_bishop_frame.colwise() = m_bishop_frame_vector;
 
     m_edge_theta.setZero();
     m_edge_theta(0) = theta_zero;
     m_edge_theta(n) = theta_n;
-
-    m_edge_length = getEdges().colwise().norm().transpose();
 }
 
 void DiscreteElasticRod::update(double delta_time, size_t max_newton_iterations)
 {
     static float base_time = 0;
-    const float y = 0.5f + std::sin(base_time) * 0.1f;
+    const float y = std::sin(base_time) * 0.1f;
     base_time += delta_time;
 
     m_vertex_positions.col(m_n / 2).y() = y;
@@ -58,4 +70,11 @@ void DiscreteElasticRod::update(double delta_time, size_t max_newton_iterations)
 void DiscreteElasticRod::setVertexPosition(uint64_t vertex_index, const Eigen::Vector3f &new_position)
 {
     m_vertex_positions.col(vertex_index) = new_position;
+}
+
+void DiscreteElasticRod::randomizeVertexPositions()
+{
+    m_vertex_positions.block(1, 0, 2, m_n + 2).setRandom() *= 0.1f;
+
+    transportBishopFrame();
 }
