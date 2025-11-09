@@ -63,6 +63,11 @@ private:
      */
     uint64_t m_n;
 
+    /**
+     * @brief Set when positions of vertices are randomized or moved.
+     */
+    bool m_is_straight_isotropic;
+
 public:
     /**
      * @brief Creates a discrete elastic rod with `n` inner vertices.
@@ -192,6 +197,11 @@ public:
      * \brief Randomize the positions of the vertices within an area around the initial position.
      */
     void randomizeVertexPositions();
+
+    /**
+     * @brief Whether this rod is straight and isotropic when at rest.
+     */
+    inline bool is_straight_isotropic() const { return m_is_straight_isotropic; }
 
 private:
     void doSymplecticEuler(double delta_time);

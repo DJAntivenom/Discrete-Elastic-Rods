@@ -8,7 +8,8 @@ DiscreteElasticRod::DiscreteElasticRod(uint64_t n, float theta_zero, float theta
     m_bishop_frame(3, n + 1),
     m_edge_theta(n + 1),
     m_edge_length(n + 1),
-    m_n(n)
+    m_n(n),
+    m_is_straight_isotropic(true)
 {
     Eigen::Vector3f start{ -0.5f, 0.f, 0.f };
     Eigen::Vector3f increment{ 0.1f, 0.0f, 0.0f };
@@ -70,11 +71,15 @@ void DiscreteElasticRod::update(double delta_time, size_t max_newton_iterations)
 void DiscreteElasticRod::setVertexPosition(uint64_t vertex_index, const Eigen::Vector3f &new_position)
 {
     m_vertex_positions.col(vertex_index) = new_position;
+
+    m_is_straight_isotropic = false;
+    transportBishopFrame();
 }
 
 void DiscreteElasticRod::randomizeVertexPositions()
 {
     m_vertex_positions.block(1, 0, 2, m_n + 2).setRandom() *= 0.1f;
 
+    m_is_straight_isotropic = false;
     transportBishopFrame();
 }
