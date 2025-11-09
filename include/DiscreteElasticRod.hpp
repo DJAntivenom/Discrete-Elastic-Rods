@@ -85,6 +85,11 @@ public:
     inline const Eigen::Matrix3Xf &getVertexPositions() const { return m_vertex_positions; }
 
     /**
+     * @brief Set vertex position.
+     */
+    void setVertexPosition(uint64_t vertex_index, const Eigen::Vector3f &new_position);
+
+    /**
      * @brief Get the vertex velocities.
      * @return A matrix of size 3x(n+2) with the velocities of the vertices.
      */
@@ -100,6 +105,15 @@ public:
     * @return A column-vector of size n with the angles (compared to bishop from) of the vertices.
     */
     inline const Eigen::VectorXf &getEdgeThetas() const { return m_edge_theta; }
+
+    /**
+    * @brief Set the edge angle boundary conditions.
+    */
+    inline void setBoundaryEdgeThetas(float theta_start, float theta_end)
+    {
+        m_edge_theta[0] = theta_start;
+        m_edge_theta[m_edge_theta.size() - 1] = theta_end;
+    }
 
     /**
      * \brief Get the lengths of the edges.

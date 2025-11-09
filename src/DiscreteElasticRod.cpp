@@ -43,6 +43,8 @@ void DiscreteElasticRod::update(double delta_time, size_t max_newton_iterations)
 
     m_vertex_positions.col(m_n / 2).y() = y;
 
+    return;
+
     /* algorithm outline */
 
     /// 4., 5. apply torque and integrate rigid body
@@ -63,6 +65,11 @@ void DiscreteElasticRod::update(double delta_time, size_t max_newton_iterations)
     /// 11. quasistatic material frame update (Newton according to equation 4 in paper)
     /// => Use newton solver from exercises
     applyTwist(max_newton_iterations);
+}
+
+void DiscreteElasticRod::setVertexPosition(uint64_t vertex_index, const Eigen::Vector3f &new_position)
+{
+    m_vertex_positions.col(vertex_index) = new_position;
 }
 
 void DiscreteElasticRod::randomizeVertexPositions()

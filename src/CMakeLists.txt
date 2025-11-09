@@ -36,6 +36,7 @@ target_sources(${DER_TARGET_NAME}
   "bishopFrame.cpp"
   "DiscreteElasticRod.cpp"
   "PolyscopeCallback.cpp"
+  "polyscopeHelper.cpp"
   "symplecticEuler.cpp"
   "twist.cpp"
 )
