@@ -96,7 +96,7 @@ static float bishop_frame_animation_time = 2.f;
 /**
  * @brief If true, the centerline will be drawn and the frame is transparent.
  */
-static bool draw_centerline = true;
+static bool draw_centerline = false;
 
 /**
  * @brief If true, the handles for controlling the rods will be drawn.
@@ -122,6 +122,11 @@ static int max_newton_iterations = 5;
  * \brief Written to by cout, see teebuffer below.
  */
 static std::ostringstream log_stream;
+
+/**
+ * @brief How many vertices should be rendered per ring.
+ */
+static int vertices_per_ring = 16;
 
 /**
  * \brief Update the position of the handles for selected rod.
@@ -287,6 +292,7 @@ static void makeConfigWindow()
         }
 
         ImGui::Checkbox("Automatic bounding-box", &polyscope::options::automaticallyComputeSceneExtents);
+        ImGui::DragInt("Mesh Smoothness", &vertices_per_ring, 1, 8);
     }
 
     if (ImGui::CollapsingHeader("Debug settings", ImGuiTreeNodeFlags_DefaultOpen))
@@ -355,16 +361,25 @@ static void updateViewerData()
 
     polyscope::removeAllStructures();
 
-    if (draw_centerline)
+    const uint64_t rod_count = rods.size();
+    for (uint64_t rod_index = 0; rod_index < rod_count; ++rod_index)
     {
-        const uint64_t rod_count = rods.size();
-        for (uint64_t rod_index = 0; rod_index < rod_count; ++rod_index)
+        auto mesh = rods[rod_index].registerSurfaceMesh("Rod_" + std::to_string(rod_index), vertices_per_ring);
+
+        if (draw_centerline)
         {
+            polyscope::options::transparencyMode = polyscope::TransparencyMode::Simple;
+            mesh->setTransparency(0.5f);
+
             const Eigen::MatrixX3f vertex_positions = rods[rod_index].getVertexPositions().transpose();
 
             auto lines = polyscope::registerCurveNetworkLine("Centerline_" + std::to_string(rod_index), vertex_positions);
 
             lines->setRadius(centerline_radius, false);
+        }
+        else
+        {
+            polyscope::options::transparencyMode = polyscope::TransparencyMode::None;
         }
     }
 
