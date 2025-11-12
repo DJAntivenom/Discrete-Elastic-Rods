@@ -6,6 +6,8 @@
 #ifndef __DISCRETE_ELASTIC_ROD_HPP__
 #define __DISCRETE_ELASTIC_ROD_HPP__
 
+#include "Optimization.h"
+
 #include <string>
 
 #pragma GCC diagnostic push
@@ -244,6 +246,10 @@ private:
     void transportBishopFrame();
 
     void applyTwist(size_t max_newton_iterations);
+
+    bool twistEnergy(const Optimization::VectorXf &theta, double &energy) const;
+    bool twistGradient(const Optimization::VectorXf &theta, Optimization::VectorXf &gradient) const;
+    bool twistHessian(const Optimization::VectorXf &theta, Optimization::TripletListF &hessian) const;
 };
 
 #endif

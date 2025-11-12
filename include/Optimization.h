@@ -1,9 +1,17 @@
 #ifndef __DER_OPTIMIZATION_H__
 #define __DER_OPTIMIZATION_H__
 
+#include <Eigen/Eigen>
+
 class Optimization
 {
 public:
+    using SparseMatrixF = Eigen::SparseMatrix<float>;
+    using MatrixXf = Eigen::MatrixXf;
+    using VectorXf = Eigen::VectorXf;
+    using TripletListF = std::vector<Eigen::Triplet<float>>;
+    using Solver = Eigen::SimplicialLDLT<SparseMatrixF, Eigen::Upper>;
+
     enum class Optimizer
     {
         GRADIENT_DESCENT,
@@ -23,53 +31,62 @@ public:
 
 public:
     /// Gradient and hessian functions also compute objective value and lower-order derivatives.
-    std::function<bool(const Eigen::VectorXf &, double &)> objective_function;
-    std::function<bool(const Eigen::VectorXf &, double &, Eigen::VectorXf &)> gradient_function;
-    std::function<bool(const Eigen::VectorXf &, double &, Eigen::VectorXf &, std::vector<Eigen::Triplet<double>> &)> hessian_function;
+    std::function<bool(const VectorXf &, double &)> objective_function;
+    std::function<bool(const VectorXf &, double &, VectorXf &)> gradient_function;
+    std::function<bool(const VectorXf &, double &, VectorXf &, TripletListF &)> hessian_function;
 
     Optimization()
     {
-        objective_function = [&](const Eigen::VectorXf &y, double &energy)
+        objective_function = [&](const VectorXf &y, double &energy)
         {
+            (void)y;
+            (void)energy;
             return false;
         };
-        gradient_function = [&](const Eigen::VectorXf &y, double &energy, Eigen::VectorXf &gradient)
+        gradient_function = [&](const VectorXf &y, double &energy, VectorXf &gradient)
         {
+            (void)y;
+            (void)energy;
+            (void)gradient;
             return false;
         };
-        hessian_function = [&](const Eigen::VectorXf &y, double &energy, Eigen::VectorXf &gradient, std::vector<Eigen::Triplet<double>> &hessian)
+        hessian_function = [&](const VectorXf &y, double &energy, VectorXf &gradient, TripletListF &hessian)
         {
+            (void)y;
+            (void)energy;
+            (void)gradient;
+            (void)hessian;
             return false;
         };
     }
 
 public:
     /// Solve for x in Ax = b. Return true on success.
-    bool linearSolve(const std::vector<Eigen::Triplet<double>> &hessian, const Eigen::VectorXf &b, Eigen::VectorXf &x);
+    bool linearSolve(const TripletListF &hessian, const VectorXf &b, VectorXf &x);
 
 private:
-    OptimizationStatus getDirectionGradientDescent(const Eigen::VectorXf &y, Eigen::VectorXf &dy, double &initial_objective_value);
+    OptimizationStatus getDirectionGradientDescent(const VectorXf &y, VectorXf &dy, double &initial_objective_value);
 
-    OptimizationStatus getDirectionNewton(const Eigen::VectorXf &y, Eigen::VectorXf &dy, double &initial_objective_value);
+    OptimizationStatus getDirectionNewton(const VectorXf &y, VectorXf &dy, double &initial_objective_value);
 
 public:
-    OptimizationStatus step(Eigen::VectorXf &y);
+    OptimizationStatus step(VectorXf &y);
 
     /// Find step along search direction dy that decreases the objective value. Update y accordingly.
-    bool lineSearch(Eigen::VectorXf &y, const Eigen::VectorXf &dy, double initial_objective_value);
+    bool lineSearch(VectorXf &y, const VectorXf &dy, double initial_objective_value);
 
-    bool lineSearch(Eigen::VectorXf &y, const Eigen::VectorXf &dy);
+    bool lineSearch(VectorXf &y, const VectorXf &dy);
 
     /// Check gradient for scalar function of vector argument.
-    static bool checkGradient(const Eigen::VectorXf &y, Eigen::VectorXf &error,
-                              const std::function<bool(const Eigen::VectorXf &, double &)> &func,
-                              const std::function<bool(const Eigen::VectorXf &, Eigen::VectorXf &)> &grad_func, double epsilon,
+    static bool checkGradient(const VectorXf &y, VectorXf &error,
+                              const std::function<bool(const VectorXf &, double &)> &func,
+                              const std::function<bool(const VectorXf &, VectorXf &)> &grad_func, double epsilon,
                               int print_level = 0);
 
     /// Check hessian for scalar function of vector argument.
-    static bool checkHessian(const Eigen::VectorXf &y, Eigen::MatrixXf &error,
-                             const std::function<bool(const Eigen::VectorXf &, Eigen::VectorXf &)> &grad_func,
-                             const std::function<bool(const Eigen::VectorXf &, Eigen::MatrixXf &)> &hess_func, double epsilon,
+    static bool checkHessian(const VectorXf &y, MatrixXf &error,
+                             const std::function<bool(const VectorXf &, VectorXf &)> &grad_func,
+                             const std::function<bool(const VectorXf &, MatrixXf &)> &hess_func, double epsilon,
                              int print_level = 0);
 };
 

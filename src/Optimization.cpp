@@ -1,15 +1,6 @@
-#include <Eigen/Dense>
-#include <Eigen/SparseCholesky>
-
 #include <Optimization.h>
 
 #include <iostream>
-
-using SparseMatrixF = Eigen::SparseMatrix<double>;
-using Eigen::VectorXf;
-using Eigen::MatrixXf;
-using TripletListF = std::vector<Eigen::Triplet<double>>;
-using Solver = Eigen::SimplicialLDLT<SparseMatrixF, Eigen::Upper>;
 
 Optimization::OptimizationStatus Optimization::step(VectorXf &y)
 {
