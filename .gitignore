@@ -52,3 +52,4 @@ build_release
 *.ini
 
 CMakeUserPresets.json
+.idea/
