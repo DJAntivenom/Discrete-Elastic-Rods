@@ -1,4 +1,5 @@
 #include <DiscreteElasticRod.hpp>
+#include <Optimization.h>
 
 #include <stdexcept>
 
@@ -17,7 +18,43 @@ void DiscreteElasticRod::applyTwist(size_t max_newton_iterations)
     }
     else
     {
-        (void)max_newton_iterations;
-        throw std::runtime_error(std::string("DiscreteElasticRod::applyTwist(): Not implemented for non-straight rods"));
+        Optimization opt;
+        opt.objective_function = [&](const Eigen::VectorXf &theta, double &energy)
+            {
+                return twistEnergy(theta, energy);
+            };
+        opt.gradient_function = [&](const Eigen::VectorXf &theta,
+                                    double &energy,
+                                    Eigen::VectorXf &gradient)
+            {
+                twistEnergy(theta, energy);
+                return twistGradient(theta, gradient);
+            };
+        opt.hessian_function = [&](const Optimization::VectorXf &theta,
+                                   double &energy,
+                                   Optimization::VectorXf &gradient,
+                                   Optimization::TripletListF &hessian)
+            {
+                twistEnergy(theta, energy);
+                twistGradient(theta, gradient);
+                return twistHessian(theta, hessian);
+            };
+
+        for (size_t step = 0; step < max_newton_iterations; ++step)
+        {
+            auto theta = m_edge_theta;
+            auto result = opt.step(theta);
+            switch (result)
+            {
+            case Optimization::OptimizationStatus::SUCCESS:
+                m_edge_theta = theta;
+                break;
+            case Optimization::OptimizationStatus::FAILURE:
+                std::cout << "Material frame calculation failed" << std::endl;
+                return;
+            case Optimization::OptimizationStatus::CONVERGED:
+                return;
+            }
+        }
     }
 }
