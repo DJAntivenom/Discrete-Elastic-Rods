@@ -49,8 +49,6 @@ void DiscreteElasticRod::update(double delta_time, size_t max_newton_iterations)
 
     m_vertex_positions.col(m_n / 2).y() = y;
 
-    //return;
-
     /* algorithm outline */
 
     /// 4., 5. apply torque and integrate rigid body
@@ -59,7 +57,7 @@ void DiscreteElasticRod::update(double delta_time, size_t max_newton_iterations)
     /// 6., 7. compute forces (given in forumla 11 and above (sec. 7.1))
     /// integrate centerline => apply symplectic euler, see ex.1 handout for formula
     /// initial velocity is zero
-    //doSymplecticEuler(delta_time);
+    doSymplecticEuler(delta_time);
 
     /// 8. TODO: enforce constraints to guarantee inextensibility
 
