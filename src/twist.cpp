@@ -3,6 +3,27 @@
 
 #include <stdexcept>
 
+bool DiscreteElasticRod::twistEnergy(const Optimization::VectorXf &theta, double &energy)const
+{
+    energy = m_beta * ((theta.segment(1, m_n) - theta.head(m_n)).array().square()
+                       * m_l_i.segment(1, m_n).array()).sum();
+    return true; /* all thetas are valid */
+}
+
+bool DiscreteElasticRod::twistGradient(const Optimization::VectorXf &theta, Optimization::VectorXf &gradient) const
+{
+    (void)theta;
+    (void)gradient;
+    throw std::runtime_error(std::string(__func__) + ": Not implemented");
+}
+
+bool DiscreteElasticRod::twistHessian(const Optimization::VectorXf &theta, Optimization::TripletListF &hessian) const
+{
+    (void)theta;
+    (void)hessian;
+    throw std::runtime_error(std::string(__func__) + ": Not implemented");
+}
+
 void DiscreteElasticRod::applyTwist(size_t max_newton_iterations)
 {
     if (m_is_straight_isotropic)
