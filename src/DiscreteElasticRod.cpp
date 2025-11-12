@@ -2,7 +2,9 @@
 
 #include <iostream>
 
-DiscreteElasticRod::DiscreteElasticRod(uint64_t n, float radius, float theta_zero, float theta_n) :
+DiscreteElasticRod::DiscreteElasticRod(uint64_t n,
+                                       float alpha, float beta,
+                                       float radius, float theta_zero, float theta_n) :
     m_vertex_positions(3, (n + 2)),
     m_vertex_velocities(3, (n + 2)),
     m_bishop_frame(3, n + 1),
@@ -11,7 +13,9 @@ DiscreteElasticRod::DiscreteElasticRod(uint64_t n, float radius, float theta_zer
     m_l_i(n + 2),
     m_n(n),
     m_radius(radius),
-    m_is_straight_isotropic(true)
+    m_is_straight_isotropic(true),
+    m_alpha(alpha),
+    m_beta(beta)
 {
     Eigen::Vector3f start{ -0.5f, 0.f, 0.f };
     Eigen::Vector3f increment{ 0.1f, 0.0f, 0.0f };

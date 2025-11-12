@@ -88,13 +88,20 @@ private:
      */
     bool m_is_straight_isotropic;
 
+    /**
+     * \brief Material parameters.
+     */
+    float m_alpha, m_beta;
+
 public:
     /**
      * @brief Creates a discrete elastic rod with `n` inner vertices.
      * @param n The number of inner vertices. There will be 2 more vertices,
      *  corresponding to the constrained boundary vertices.
      */
-    DiscreteElasticRod(uint64_t n, float radius = 0.5f, float theta_zero = 0.f, float theta_n = 0.f);
+    DiscreteElasticRod(uint64_t n,
+                       float alpha, float beta,
+                       float radius = 0.5f, float theta_zero = 0.f, float theta_n = 0.f);
     virtual ~DiscreteElasticRod() = default;
 
     /**

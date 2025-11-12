@@ -129,6 +129,11 @@ static std::ostringstream log_stream;
 static int vertices_per_ring = 16;
 
 /**
+ * \brief Material parameters.
+ */
+static float alpha = 1.f, beta = 1.f;
+
+/**
  * \brief Update the position of the handles for selected rod.
  */
 static void updateRodHandles(int rod_index)
@@ -175,10 +180,10 @@ static void updateRodHandles(int rod_index)
  *
  * TODO: Where to put these helper functions?
  */
-static void initializeRod(int n_vertices)
+static void initializeRod(int n_vertices, float alpha, float beta)
 {
     // Add rod
-    rods.emplace_back(n_vertices);
+    rods.emplace_back(n_vertices, alpha, beta);
 
     // Initialize rotation frame
     rod_thetas.resize(2, rod_thetas.cols() + 1);
@@ -259,9 +264,11 @@ static void makeConfigWindow()
         if (rods.size() == 0)
         {
             ImGui::InputInt("Vertices n", &n_to_add);
+            ImGui::InputFloat("Alpha", &alpha);
+            ImGui::InputFloat("Beta", &beta);
             if (ImGui::Button("Create Rod"))
             {
-                initializeRod(n_to_add);
+                initializeRod(n_to_add, alpha, beta);
             }
         }
         else
