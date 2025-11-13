@@ -8,6 +8,7 @@ DiscreteElasticRod::DiscreteElasticRod(uint64_t n, float theta_zero, float theta
     m_bishop_frame(3, n + 1),
     m_edge_theta(n + 1),
     m_edge_length(n + 1),
+    m_l_i(n + 2), // TODO: Replace with twist branch version
     m_n(n)
 {
     Eigen::Vector3f start{ -0.5f, 0.f, 0.f };
@@ -18,6 +19,12 @@ DiscreteElasticRod::DiscreteElasticRod(uint64_t n, float theta_zero, float theta
         if (i > 0)
             m_edge_length[i - 1] = 0.1;
     }
+
+    // TODO: Replace with twist branch version
+    m_l_i[0] = m_edge_length[0] * 2;
+    m_l_i[m_n + 1] = m_edge_length[m_n] * 2;
+    m_l_i.segment(1, m_n - 1) = m_edge_length.segment(0, m_n - 1) + m_edge_length.segment(1, m_n - 1);
+
     m_bishop_frame_vector = Eigen::Vector3f(0.f, 0.f, 0.1f); //perpendicular to first edge
 
     m_total_rod_length = m_edge_length.sum();

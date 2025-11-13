@@ -53,6 +53,13 @@ private:
      */
     Eigen::VectorXf m_edge_length;
 
+    /** TODO: Replace with twist branch version
+     * \brief Half the size of the voronoi region associated with each vertex.
+     *
+     * Dimension: (n + 2) but not useful at boundaries
+     */
+    Eigen::VectorXf m_l_i;
+
     /**
      * \brief The total length of the rod.
      */
