@@ -142,6 +142,7 @@ void DiscreteElasticRod::applyTwist(size_t max_newton_iterations)
     {
         Optimization opt;
         opt.optimizer = Optimization::Optimizer::NEWTON;
+        opt.tolerance_exponent = -10;
         opt.objective_function = [&](const Eigen::VectorXf &theta, double &energy)
             {
                 return twistEnergy(theta, energy);
