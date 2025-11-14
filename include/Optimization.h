@@ -10,7 +10,7 @@ public:
     using MatrixXf = Eigen::MatrixXf;
     using VectorXf = Eigen::VectorXf;
     using TripletListF = std::vector<Eigen::Triplet<float>>;
-    using Solver = Eigen::SimplicialLDLT<SparseMatrixF, Eigen::Upper>;
+    using Solver = Eigen::SparseLU<SparseMatrixF>;
 
     enum class Optimizer
     {
