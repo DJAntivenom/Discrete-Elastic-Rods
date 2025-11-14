@@ -275,13 +275,14 @@ Eigen::Matrix4Xf DiscreteElasticRod::getMaterialCurvature() const
 
     for (uint32_t vertex = 1; vertex <= m_n; ++vertex)
     {
+        /** NOTE: need to subtract 1 in binormals.col because binormals is just inner vertices */
         {
             const uint32_t j = vertex - 1;
             const Vector3f m_1_i_min_1 = AngleAxisf(m_edge_theta[j], tangents.col(j)) * m_bishop_frame.col(j);
             const Vector3f m_2_i_min_1 = AngleAxisf(m_edge_theta[j] + M_PI_2, tangents.col(j)) * m_bishop_frame.col(j);
             curvature.block<2, 1>(0, vertex) <<
-                binormals.col(vertex).dot(m_2_i_min_1),
-                binormals.col(vertex).dot(m_1_i_min_1);
+                binormals.col(vertex - 1).dot(m_2_i_min_1),
+                binormals.col(vertex - 1).dot(m_1_i_min_1);
         }
 
         {
@@ -289,8 +290,8 @@ Eigen::Matrix4Xf DiscreteElasticRod::getMaterialCurvature() const
             const Vector3f m_1_i = AngleAxisf(m_edge_theta[j], tangents.col(j)) * m_bishop_frame.col(j);
             const Vector3f m_2_i = AngleAxisf(m_edge_theta[j] + M_PI_2, tangents.col(j)) * m_bishop_frame.col(j);
             curvature.block<2, 1>(2, vertex) <<
-                binormals.col(vertex).dot(m_2_i),
-                binormals.col(vertex).dot(m_1_i);
+                binormals.col(vertex - 1).dot(m_2_i),
+                binormals.col(vertex - 1).dot(m_1_i);
         }
     }
 
