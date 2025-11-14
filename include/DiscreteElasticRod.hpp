@@ -221,13 +221,14 @@ public:
     }
 
     /**
-     * \brief Get omega_i from the paper
+     * \brief Get omega_i from the paper given edge-wise rotations theta
+     * \param theta A vector of edge-wise rotations with same dimension as m_edge_theta.
      * \return A 4 x (n + 2) matrix with omega at the vertices, where every column is
      * {omega_i^[i-1].x, omega_i^[i-1].y, omega_i^[i].x, omega_i^[i].y}.
      *
      * The values at the boundary vertices is undefined.
      */
-    Eigen::Matrix4Xf getMaterialCurvature() const;
+    Eigen::Matrix4Xf getMaterialCurvature(const Eigen::VectorXf &theta) const;
 
     /**
      * \brief Get the bishop frame {x, u, v} at alpha along the rod.

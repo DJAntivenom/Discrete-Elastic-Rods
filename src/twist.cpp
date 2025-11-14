@@ -6,36 +6,46 @@
 
 bool DiscreteElasticRod::twistEnergy(const Optimization::VectorXf &theta, double &energy)const
 {
-    assert(theta.size() == static_cast<Eigen::Index>(m_n + 1ul));
+    /**
+     * TODO: if we have a stressfree boundary this needs to be theta.size() == m_n
+     * If we have two stressfree ends this is not defined? Because then there shouldn't
+     * be any twist, I guess.
+     */
+    assert(theta.size() == m_edge_theta.size());
 
-    /** boundary conditions */
-    if (theta[0] != m_edge_theta[0] ||
-        theta[m_n] != m_edge_theta[m_n])
-        return false;
 
-    energy = m_beta * ((theta.segment(1, m_n) - theta.head(m_n)).array().square()
-                       * m_l_i.segment(1, m_n).array()).sum();
+    const auto inv_l_i = m_l_i.segment(1, theta.size() - 1).cwiseInverse();
+    const auto m_j_square_div_l =
+        (theta.tail(theta.size() - 1) -
+         theta.head(theta.size() - 1))
+        .cwiseSquare()
+        .cwiseProduct(inv_l_i);
+
+    energy = m_beta * m_j_square_div_l.sum();
+
     return true;
 }
 
 bool DiscreteElasticRod::twistGradient(const Optimization::VectorXf &theta, Optimization::VectorXf &gradient) const
 {
-    assert(theta.size() == static_cast<Eigen::Index>(m_n + 1ul));
+    /**
+     * TODO: if we have a stressfree boundary this needs to be theta.size() == m_n
+     * If we have two stressfree ends this is not defined? Because then there shouldn't
+     * be any twist, I guess.
+     */
+    assert(theta.size() == m_edge_theta.size());
 
-    /** boundary conditions */
-    if (theta[0] != m_edge_theta[0] ||
-        theta[m_n] != m_edge_theta[m_n])
-        return false;
-
-    gradient.resizeLike(theta);
-    gradient.setZero();
+    gradient.setZero(theta.size());
 
     const Eigen::VectorXf inv_l_i = m_l_i.cwiseInverse();
-    const Eigen::Matrix4Xf omega = getMaterialCurvature();
+    const Eigen::Matrix4Xf omega = getMaterialCurvature(theta);
     const auto rotation = Eigen::Rotation2Df(M_PI_2);
     const auto rotated_B = rotation * m_B_matrix;
 
-    const Eigen::VectorXf m_j_div_l = (theta.tail(m_n) - theta.head(m_n)).cwiseProduct(inv_l_i.segment(1, m_n));
+    const Eigen::VectorXf m_j_div_l =
+        (theta.tail(theta.size() - 1) -
+         theta.head(theta.size() - 1))
+        .cwiseProduct(inv_l_i.segment(1, theta.size() - 1));
 
     /** TODO: adapt to stressfree boundary condition */
     for (uint32_t j = 1; j < m_n; ++j)
@@ -109,7 +119,7 @@ void DiscreteElasticRod::applyTwist(size_t max_newton_iterations)
         for (size_t step = 0; step < max_newton_iterations; ++step)
         {
             /** TODO: If we have different boundary conditions, we need to only pass the varying values here */
-            auto theta = m_edge_theta;
+            Eigen::VectorXf theta = m_edge_theta;
             auto result = opt.step(theta);
             switch (result)
             {
@@ -123,5 +133,7 @@ void DiscreteElasticRod::applyTwist(size_t max_newton_iterations)
                 return;
             }
         }
+
+        std::cout << "Reached max iterations in material frame optimization" << std::endl;
     }
 }
