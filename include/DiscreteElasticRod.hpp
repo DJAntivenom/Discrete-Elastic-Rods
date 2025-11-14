@@ -95,6 +95,16 @@ private:
      */
     float m_alpha, m_beta;
 
+    /**
+     * \brief \overbar{B}^j from the paper.
+     */
+    Eigen::Matrix2f m_B_matrix;
+
+    /**
+     * @brief \overbar{\omega} from the paper.
+     */
+    Eigen::Matrix4Xf m_w_overbar;
+
 public:
     /**
      * @brief Creates a discrete elastic rod with `n` inner vertices.
