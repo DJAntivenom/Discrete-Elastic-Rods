@@ -52,12 +52,6 @@ DiscreteElasticRod::DiscreteElasticRod(uint64_t n,
 
 void DiscreteElasticRod::update(double delta_time, size_t max_newton_iterations)
 {
-    static float base_time = 0;
-    const float y = std::sin(base_time) * 0.1f;
-    base_time += delta_time;
-
-    m_vertex_positions.col(m_n / 2).y() = y;
-
     /* algorithm outline */
 
     /// 4., 5. apply torque and integrate rigid body

@@ -1,5 +1,6 @@
 #include <Optimization.h>
 
+#include <cassert>
 #include <iostream>
 
 Optimization::OptimizationStatus Optimization::step(VectorXf &y)
@@ -7,7 +8,7 @@ Optimization::OptimizationStatus Optimization::step(VectorXf &y)
 
     VectorXf dy;
     double initial_objective_value;
-    OptimizationStatus status;
+    OptimizationStatus status = OptimizationStatus::FAILURE;
     switch (optimizer)
     {
     case Optimization::Optimizer::GRADIENT_DESCENT:
@@ -18,6 +19,7 @@ Optimization::OptimizationStatus Optimization::step(VectorXf &y)
         break;
     default:
         assert(0);
+        return status;
     }
 
     if (status == OptimizationStatus::SUCCESS)
