@@ -26,8 +26,8 @@ DiscreteElasticRod::DiscreteElasticRod(uint64_t n,
             m_edge_length[i - 1] = 0.1;
     }
     m_l_i[0] = m_edge_length[0] * 2;
+    m_l_i.segment(1, m_n) = m_edge_length.head(m_n) + m_edge_length.tail(m_n);
     m_l_i[m_n + 1] = m_edge_length[m_n] * 2;
-    m_l_i.segment(1, m_n - 1) = m_edge_length.segment(0, m_n - 1) + m_edge_length.segment(1, m_n - 1);
 
     m_total_rod_length = m_edge_length.sum();
 
