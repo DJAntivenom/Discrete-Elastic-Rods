@@ -211,6 +211,15 @@ public:
     }
 
     /**
+     * \brief Get omega_i from the paper
+     * \return A 4 x (n + 2) matrix with omega at the vertices, where every column is
+     * {omega_i^[i-1].x, omega_i^[i-1].y, omega_i^[i].x, omega_i^[i].y}.
+     *
+     * The values at the boundary vertices is undefined.
+     */
+    Eigen::Matrix4Xf getMaterialCurvature() const;
+
+    /**
      * \brief Get the bishop frame {x, u, v} at alpha along the rod.
      *
      * The frame is represented in reduced form as a 3x3 matrix, where

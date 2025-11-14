@@ -264,3 +264,35 @@ polyscope::SurfaceMesh *DiscreteElasticRod::registerSurfaceMesh(const std::strin
 
     return mesh;
 }
+
+Eigen::Matrix4Xf DiscreteElasticRod::getMaterialCurvature() const
+{
+    using namespace Eigen;
+
+    Matrix4Xf curvature(4, m_n + 2);
+    const auto binormals = getBinormals();
+    const auto tangents = getTangents();
+
+    for (uint32_t vertex = 1; vertex <= m_n; ++vertex)
+    {
+        {
+            const uint32_t j = vertex - 1;
+            const Vector3f m_1_i_min_1 = AngleAxisf(m_edge_theta[j], tangents.col(j)) * m_bishop_frame.col(j);
+            const Vector3f m_2_i_min_1 = AngleAxisf(m_edge_theta[j] + M_PI_2, tangents.col(j)) * m_bishop_frame.col(j);
+            curvature.block<2, 1>(0, vertex) <<
+                binormals.col(vertex).dot(m_2_i_min_1),
+                binormals.col(vertex).dot(m_1_i_min_1);
+        }
+
+        {
+            const uint32_t j = vertex;
+            const Vector3f m_1_i = AngleAxisf(m_edge_theta[j], tangents.col(j)) * m_bishop_frame.col(j);
+            const Vector3f m_2_i = AngleAxisf(m_edge_theta[j] + M_PI_2, tangents.col(j)) * m_bishop_frame.col(j);
+            curvature.block<2, 1>(2, vertex) <<
+                binormals.col(vertex).dot(m_2_i),
+                binormals.col(vertex).dot(m_1_i);
+        }
+    }
+
+    return curvature;
+}
