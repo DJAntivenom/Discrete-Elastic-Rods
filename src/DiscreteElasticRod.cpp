@@ -47,7 +47,7 @@ DiscreteElasticRod::DiscreteElasticRod(uint64_t n,
     /** TODO: allow anisotropic rods, by minimizing E_bend wrt. B */
     m_B_matrix = Eigen::Vector2f::Constant(alpha).asDiagonal();
 
-    m_w_overbar = getMaterialCurvature();
+    m_w_overbar = getMaterialCurvature(m_edge_theta);
 }
 
 void DiscreteElasticRod::update(double delta_time, size_t max_newton_iterations)

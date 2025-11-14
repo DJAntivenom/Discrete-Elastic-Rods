@@ -66,6 +66,9 @@ bool DiscreteElasticRod::twistGradient(const Optimization::VectorXf &theta, Opti
 
         /** NOTE: need to subtract 1 because m_j[0] = theta^1 - theta^0 */
         gradient[j] += 2 * m_beta * (m_j_div_l[j - 1] - m_j_div_l[j]);
+
+        assert(!std::isnan(gradient[j]));
+        assert(std::isfinite(gradient[j]));
     }
 
     return true;
@@ -73,9 +76,53 @@ bool DiscreteElasticRod::twistGradient(const Optimization::VectorXf &theta, Opti
 
 bool DiscreteElasticRod::twistHessian(const Optimization::VectorXf &theta, Optimization::TripletListF &hessian) const
 {
-    (void)theta;
-    (void)hessian;
-    throw std::runtime_error(std::string(__func__) + ": Not implemented");
+    /**
+     * TODO: if we have a stressfree boundary this needs to be theta.size() == m_n
+     * If we have two stressfree ends this is not defined? Because then there shouldn't
+     * be any twist, I guess.
+     */
+    assert(theta.size() == m_edge_theta.size());
+
+    const Eigen::VectorXf inv_l_i = m_l_i.cwiseInverse();
+    const Eigen::Matrix4Xf omega = getMaterialCurvature(theta);
+    const auto rotation = Eigen::Rotation2Df(M_PI_2);
+    const auto rotated_B = rotation.matrix().transpose() * m_B_matrix * rotation;
+    assert(!inv_l_i.hasNaN());
+    assert(inv_l_i.allFinite());
+
+    /** hessian.emplace_back(row, col, value) */
+    /** hessian has dimensions theta.rows() x theta.rows() */
+    for (uint32_t j = 1; j < m_n; ++j)
+    {
+        hessian.emplace_back(j, j - 1, -2.f * m_beta * inv_l_i[j]);
+        assert(!std::isnan(hessian.back().value()));
+        assert(std::isfinite(hessian.back().value()));
+        hessian.emplace_back(j, j + 1, -2.f * m_beta * inv_l_i[j + 1]);
+        assert(!std::isnan(hessian.back().value()));
+        assert(std::isfinite(hessian.back().value()));
+
+        float value = 2.f * m_beta * (inv_l_i[j] + inv_l_i[j + 1]);
+        /** partial^2 W_j / (partial theta^j)^2 */
+        {
+            const auto omega_j_j = omega.block<2, 1>(2, j);
+            const auto omega_bar_j_j = m_w_overbar.block<2, 1>(2, j);
+            value += inv_l_i[j] * omega_j_j.transpose() * rotated_B * omega_j_j;
+            value -= inv_l_i[j] * omega_j_j.transpose() * m_B_matrix * (omega_j_j - omega_bar_j_j);
+        }
+
+        /** partial^2 W_{j+1} / (partial theta^j)^2 */
+        {
+            const auto omega_jp1_j = omega.block<2, 1>(0, j + 1);
+            const auto omega_bar_jp1_j = m_w_overbar.block<2, 1>(0, j + 1);
+            value += inv_l_i[j + 1] * omega_jp1_j.transpose() * rotated_B * omega_jp1_j;
+            value -= inv_l_i[j + 1] * omega_jp1_j.transpose() * m_B_matrix * (omega_jp1_j - omega_bar_jp1_j);
+        }
+        assert(!std::isnan(value));
+        assert(std::isfinite(value));
+        hessian.emplace_back(j, j, value);
+    }
+
+    return true;
 }
 
 void DiscreteElasticRod::applyTwist(size_t max_newton_iterations)
