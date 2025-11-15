@@ -96,7 +96,7 @@ static float bishop_frame_animation_time = 2.f;
 /**
  * @brief If true, the centerline will be drawn and the frame is transparent.
  */
-static bool draw_centerline = true;
+static bool draw_centerline = false;
 
 /**
  * @brief If true, the handles for controlling the rods will be drawn.
@@ -122,6 +122,16 @@ static int max_newton_iterations = 5;
  * \brief Written to by cout, see teebuffer below.
  */
 static std::ostringstream log_stream;
+
+/**
+ * @brief How many vertices should be rendered per ring.
+ */
+static int vertices_per_ring = 16;
+
+/**
+ * \brief Material parameters.
+ */
+static float alpha = 1.f, beta = 1.f;
 
 /**
  * \brief Update the position of the handles for selected rod.
@@ -170,10 +180,10 @@ static void updateRodHandles(int rod_index)
  *
  * TODO: Where to put these helper functions?
  */
-static void initializeRod(int n_vertices)
+static void initializeRod(int n_vertices, float alpha, float beta)
 {
     // Add rod
-    rods.emplace_back(n_vertices);
+    rods.emplace_back(n_vertices, alpha, beta);
 
     // Initialize rotation frame
     rod_thetas.resize(2, rod_thetas.cols() + 1);
@@ -254,9 +264,11 @@ static void makeConfigWindow()
         if (rods.size() == 0)
         {
             ImGui::InputInt("Vertices n", &n_to_add);
+            ImGui::InputFloat("Alpha", &alpha);
+            ImGui::InputFloat("Beta", &beta);
             if (ImGui::Button("Create Rod"))
             {
-                initializeRod(n_to_add);
+                initializeRod(n_to_add, alpha, beta);
             }
         }
         else
@@ -287,6 +299,7 @@ static void makeConfigWindow()
         }
 
         ImGui::Checkbox("Automatic bounding-box", &polyscope::options::automaticallyComputeSceneExtents);
+        ImGui::DragInt("Mesh Smoothness", &vertices_per_ring, 1, 8);
     }
 
     if (ImGui::CollapsingHeader("Debug settings", ImGuiTreeNodeFlags_DefaultOpen))
@@ -332,9 +345,14 @@ static void makeAnalysisWindow()
 {
     auto lower_corner = std::get<0>(polyscope::state::boundingBox);
     auto upper_corner = std::get<1>(polyscope::state::boundingBox);
-    ImGui::LabelText("Scene extent", "(%.1f,%.1f,%.1f)x(%.1f,%.1f,%.1f)",
-                     lower_corner.x, lower_corner.y, lower_corner.z,
-                     upper_corner.x, upper_corner.y, upper_corner.z);
+    ImGui::Text("Scene extent: (%.1f,%.1f,%.1f)x(%.1f,%.1f,%.1f)",
+                lower_corner.x, lower_corner.y, lower_corner.z,
+                upper_corner.x, upper_corner.y, upper_corner.z);
+
+    for (uint32_t i = 0; i < rods.size(); ++i)
+    {
+        ImGui::Text("Rod %d is %sstraight and isotropic", i, rods[i].is_straight_isotropic() ? "" : "not ");
+    }
 
     ImGui::TextWrapped("Log:\n%s", log_stream.str().c_str());
 }
@@ -350,16 +368,25 @@ static void updateViewerData()
 
     polyscope::removeAllStructures();
 
-    if (draw_centerline)
+    const uint64_t rod_count = rods.size();
+    for (uint64_t rod_index = 0; rod_index < rod_count; ++rod_index)
     {
-        const uint64_t rod_count = rods.size();
-        for (uint64_t rod_index = 0; rod_index < rod_count; ++rod_index)
+        auto mesh = rods[rod_index].registerSurfaceMesh("Rod_" + std::to_string(rod_index), vertices_per_ring);
+
+        if (draw_centerline)
         {
+            polyscope::options::transparencyMode = polyscope::TransparencyMode::Simple;
+            mesh->setTransparency(0.5f);
+
             const Eigen::MatrixX3f vertex_positions = rods[rod_index].getVertexPositions().transpose();
 
             auto lines = polyscope::registerCurveNetworkLine("Centerline_" + std::to_string(rod_index), vertex_positions);
 
             lines->setRadius(centerline_radius, false);
+        }
+        else
+        {
+            polyscope::options::transparencyMode = polyscope::TransparencyMode::None;
         }
     }
 
@@ -453,12 +480,16 @@ static void updateViewerData()
 
     if (is_bishop_frame_animated)
     {
+        /* get current time */
         const double current_time = std::chrono::duration<double>(
             std::chrono::steady_clock::now().time_since_epoch()
         ).count();
+
+        /* calculate percentage of animation loop */
         const double alpha = std::min(1.,
                                       std::fmod(current_time, bishop_frame_animation_time) / bishop_frame_animation_time);
 
+        /* draw bishop frames */
         const uint64_t rod_count = rods.size();
         for (uint64_t rod_index = 0; rod_index < rod_count; ++rod_index)
         {
@@ -483,16 +514,17 @@ static void updateViewerData()
 void polyscopeCallback()
 {
     /// Main menu window on screen left.
+    static float initial_width = ImGui::GetIO().DisplaySize.x * 0.25;
     ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Once);
-    ImGui::SetNextWindowSize(ImVec2(ImGui::GetIO().DisplaySize.x * 0.25, ImGui::GetIO().DisplaySize.y),
+    ImGui::SetNextWindowSize(ImVec2(initial_width, ImGui::GetIO().DisplaySize.y),
                              ImGuiCond_Once);
     ImGui::Begin("Menu");
     makeConfigWindow();
     ImGui::End();
 
     /// Additional "Analysis" window on right, content provided by SubApp.
-    ImGui::SetNextWindowPos(ImVec2(ImGui::GetIO().DisplaySize.x * 0.75, 0), ImGuiCond_Once);
-    ImGui::SetNextWindowSize(ImVec2(ImGui::GetIO().DisplaySize.x * 0.25, ImGui::GetIO().DisplaySize.y),
+    ImGui::SetNextWindowPos(ImVec2(ImGui::GetIO().DisplaySize.x - initial_width, 0), ImGuiCond_Always);
+    ImGui::SetNextWindowSize(ImVec2(initial_width, ImGui::GetIO().DisplaySize.y),
                              ImGuiCond_Once);
     ImGui::Begin("Analysis");
     makeAnalysisWindow();
