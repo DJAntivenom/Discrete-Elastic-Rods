@@ -63,13 +63,6 @@ private:
      */
     Eigen::VectorXf m_edge_length;
 
-    /** TODO: Replace with twist branch version
-     * \brief Half the size of the voronoi region associated with each vertex.
-     *
-     * Dimension: (n + 2) but not useful at boundaries
-     */
-    Eigen::VectorXf m_l_i;
-
     /**
      * \brief Half the size of the voronoi region associated with each vertex.
      *
@@ -274,43 +267,9 @@ private:
 
     void applyTwist(size_t max_newton_iterations);
 
-<<<<<<< HEAD
-    /**
-     * Curvature binormal derivative by other node, $\nabla_i(kb)_i$, from paper chapter 7.1.
-     * @return $\nabla_i(kb)_i$
-     */
-    static Eigen::Matrix3f nabla_curvature_binormal(
-        const uint64_t i,
-        const Eigen::Matrix3Xf &edges,
-        const Eigen::Matrix3Xf &binormals)
-    {
-        const Eigen::Vector3f e_i = edges.col(i);
-        const Eigen::Vector3f e_i_min_1 = edges.col(i);
-        const Eigen::Vector3f kb_i = binormals.col(i);
-
-        float denominator = e_i_min_1.norm() * e_i.norm() + e_i_min_1.dot(e_i);
-
-        // TODO: Clean this up
-        Eigen::Matrix3f skew_e_i;
-        skew_e_i << 0, -e_i[2], e_i[1],
-            e_i[2], 0, -e_i[0],
-            -e_i[1], e_i[0], 0;
-        Eigen::Matrix3f skew_e_i_min_1;
-        skew_e_i_min_1 << 0, -e_i_min_1[2], e_i_min_1[1],
-            e_i_min_1[2], 0, -e_i_min_1[0],
-            -e_i_min_1[1], e_i_min_1[0], 0;
-
-        // TODO: Return these?
-        Eigen::Matrix3f nabla_min_1 = 2 * skew_e_i + kb_i * e_i.transpose() / denominator;
-        Eigen::Matrix3f nabla_plus_1 = 2 * skew_e_i_min_1 + kb_i * e_i_min_1.transpose() / denominator;
-
-        return -(nabla_min_1 + nabla_plus_1);
-    }
-=======
     bool twistEnergy(const Optimization::VectorXf &theta, double &energy) const;
     bool twistGradient(const Optimization::VectorXf &theta, Optimization::VectorXf &gradient) const;
     bool twistHessian(const Optimization::VectorXf &theta, Optimization::TripletListF &hessian) const;
->>>>>>> main
 };
 
 #endif
