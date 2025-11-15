@@ -6,6 +6,16 @@
 #ifndef __DISCRETE_ELASTIC_ROD_HPP__
 #define __DISCRETE_ELASTIC_ROD_HPP__
 
+#include "Optimization.h"
+
+#include <string>
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#pragma GCC diagnostic ignored "-Wunused-function"
+#include <polyscope/surface_mesh.h>
+#pragma GCC diagnostic pop
+
 #include <Eigen/Eigen>
 
 class DiscreteElasticRod
@@ -54,6 +64,13 @@ private:
     Eigen::VectorXf m_edge_length;
 
     /**
+     * \brief Half the size of the voronoi region associated with each vertex.
+     *
+     * Dimension: (n + 2) but not useful at boundaries
+     */
+    Eigen::VectorXf m_l_i;
+
+    /**
      * \brief The total length of the rod.
      */
     float m_total_rod_length;
@@ -63,13 +80,40 @@ private:
      */
     uint64_t m_n;
 
+    /**
+     * \brief Radius of the rod.
+     */
+    float m_radius;
+
+    /**
+     * @brief Set when positions of vertices are randomized or moved.
+     */
+    bool m_is_straight_isotropic;
+
+    /**
+     * \brief Material parameters.
+     */
+    float m_alpha, m_beta;
+
+    /**
+     * \brief \overbar{B}^j from the paper.
+     */
+    Eigen::Matrix2f m_B_matrix;
+
+    /**
+     * @brief \overbar{\omega} from the paper.
+     */
+    Eigen::Matrix4Xf m_w_overbar;
+
 public:
     /**
      * @brief Creates a discrete elastic rod with `n` inner vertices.
      * @param n The number of inner vertices. There will be 2 more vertices,
      *  corresponding to the constrained boundary vertices.
      */
-    DiscreteElasticRod(uint64_t n, float theta_zero = 0.f, float theta_n = 0.f);
+    DiscreteElasticRod(uint64_t n,
+                       float alpha, float beta,
+                       float radius = 0.5f, float theta_zero = 0.f, float theta_n = 0.f);
     virtual ~DiscreteElasticRod() = default;
 
     /**
@@ -177,6 +221,16 @@ public:
     }
 
     /**
+     * \brief Get omega_i from the paper given edge-wise rotations theta
+     * \param theta A vector of edge-wise rotations with same dimension as m_edge_theta.
+     * \return A 4 x (n + 2) matrix with omega at the vertices, where every column is
+     * {omega_i^[i-1].x, omega_i^[i-1].y, omega_i^[i].x, omega_i^[i].y}.
+     *
+     * The values at the boundary vertices is undefined.
+     */
+    Eigen::Matrix4Xf getMaterialCurvature(const Eigen::VectorXf &theta) const;
+
+    /**
      * \brief Get the bishop frame {x, u, v} at alpha along the rod.
      *
      * The frame is represented in reduced form as a 3x3 matrix, where
@@ -193,12 +247,29 @@ public:
      */
     void randomizeVertexPositions();
 
+    /**
+     * @brief Whether this rod is straight and isotropic when at rest.
+     */
+    inline bool is_straight_isotropic() const { return m_is_straight_isotropic; }
+
+    /**
+     * @brief Create a surface mesh from the current positions and edge thetas
+     * @param name This is passed to polyscope for later retrieval.
+     * @param vertices_per_ring How smooth the rod should be drawn.
+     */
+    polyscope::SurfaceMesh *registerSurfaceMesh(const std::string &name,
+                                                uint32_t vertices_per_ring = 8u) const;
+
 private:
     void doSymplecticEuler(double delta_time);
 
     void transportBishopFrame();
 
     void applyTwist(size_t max_newton_iterations);
+
+    bool twistEnergy(const Optimization::VectorXf &theta, double &energy) const;
+    bool twistGradient(const Optimization::VectorXf &theta, Optimization::VectorXf &gradient) const;
+    bool twistHessian(const Optimization::VectorXf &theta, Optimization::TripletListF &hessian) const;
 };
 
 #endif
