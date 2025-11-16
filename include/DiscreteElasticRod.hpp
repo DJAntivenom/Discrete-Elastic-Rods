@@ -198,6 +198,8 @@ private:
 
     void transportBishopFrame();
 
+    void applyConstraints();
+
     void applyTwist(size_t max_newton_iterations);
 };
 

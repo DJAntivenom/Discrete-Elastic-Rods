@@ -39,4 +39,5 @@ target_sources(${DER_TARGET_NAME}
   "polyscopeHelper.cpp"
   "symplecticEuler.cpp"
   "twist.cpp"
+  "constraints.cpp"
 )
