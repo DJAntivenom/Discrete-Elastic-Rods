@@ -1,5 +1,5 @@
 #include <DiscreteElasticRod.hpp>
-
+#include <common.h>
 #include <stdexcept>
 
 /**
@@ -9,11 +9,11 @@
 static std::vector<Eigen::Matrix3f> nabla_curvature_binormal(
     const uint64_t i,
     const Eigen::Matrix3Xf &edges,
-    const Eigen::Matrix3Xf &binormals)
+    const Eigen::Matrix3Xf &binormals_padded)
 {
     const Eigen::Vector3f e_i = edges.col(i);
     const Eigen::Vector3f e_i_min_1 = edges.col(i);
-    const Eigen::Vector3f kb_i = binormals.col(i);
+    const Eigen::Vector3f kb_i = binormals_padded.col(i);
 
     float denominator = e_i_min_1.norm() * e_i.norm() + e_i_min_1.dot(e_i);
 
@@ -36,38 +36,46 @@ static std::vector<Eigen::Matrix3f> nabla_curvature_binormal(
 
 void DiscreteElasticRod::doSymplecticEuler(double delta_time)
 {
+    print_debug("[doSymplecticEuler] enter");
+
     using namespace Eigen;
 
     // Calculate forces only at the `n` inner vertices
-    Matrix3Xf f(3, m_n);
+    Matrix3Xf f(3, m_n+2);
     f.setZero();
 
-    // TODO: Consider if the rod is straight or not (twist branch field m_is_straight_isotropic)
+    float start_to_end_theta = m_edge_theta[m_edge_theta.size() - 1] - m_edge_theta[0];
 
-    const float start_to_end_theta = m_edge_theta[m_edge_theta.size() - 1] - m_edge_theta[0];
+    print_debug("[doSymplecticEuler] get rod values");
+    Matrix3Xf binormals = getBinormals();
+    Matrix3Xf edges = getEdges();
+    Matrix3Xf tangents = getTangents();
 
-    const Matrix3Xf kb = getBinormals();
-    const Matrix3f edges = getEdges();
-    const Matrix3Xf tangents = getTangents();
-
-    const float L = m_edge_length.sum();
+    // Binormals padded with start and end
+    Matrix3Xf binormals_padded(3, m_n + 2);
+    binormals_padded.setZero();
+    binormals_padded.block(0, 1, 3, m_n) = binormals;
 
     // TODO: Implement case m_is_straight_isotropic = false
 
     // --- Calculate Forces
+    print_debug("[doSymplecticEuler] calculate forces");
 
-    if (m_is_straight_isotropic)
+    if (m_is_straight_isotropic || true) // TODO: Undo debug if
     {
         for (uint64_t i = 1; i <= m_n; i++)
         {
-            auto nabla_kb = nabla_curvature_binormal(i, edges, kb);
+            print_debug("[doSymplecticEuler] nabla kb");
+            auto nabla_kb = nabla_curvature_binormal(i, edges, binormals_padded);
 
             // Equation (9) of paper
-            const Vector3f nabla_psi_i_min_1 = kb.col(i) / (2 * m_edge_length[i - 1]);
-            const Vector3f nabla_psi_i_plus_1 = kb.col(i) / (2 * m_edge_length[i]);
-            const Vector3f nabla_psi_i = -(nabla_psi_i_min_1 + nabla_psi_i_plus_1);
+            print_debug("[doSymplecticEuler] nabla psi");
+            Vector3f nabla_psi_i_min_1 = binormals_padded.col(i) / (2 * m_edge_length[i - 1]);
+            Vector3f nabla_psi_i_plus_1 = binormals_padded.col(i) / (2 * m_edge_length[i]);
+            Vector3f nabla_psi_i = -(nabla_psi_i_min_1 + nabla_psi_i_plus_1);
             std::vector<Vector3f> nabla_psi = {nabla_psi_i_min_1, nabla_psi_i, nabla_psi_i_plus_1};
 
+            print_debug("[doSymplecticEuler] get node force: " + std::to_string(i));
             // For each node, consider its neighboring vertices
             for (uint64_t j = i - 1; j <= i + 1; j++)
             {
@@ -75,22 +83,39 @@ void DiscreteElasticRod::doSymplecticEuler(double delta_time)
                 const uint64_t j_nabla = j - i + 1;
 
                 // Position contribution
-                f(i, placeholders::all) += -2 * m_alpha / m_l_i[j] * nabla_kb[j_nabla].transpose() * kb.col(j);
+                print_debug("[doSymplecticEuler] get node force - 1");
+                (void)m_l_i[j];
+                print_debug("[doSymplecticEuler] get node force - 2");
+                (void)nabla_kb[j_nabla].transpose();
+                print_debug("[doSymplecticEuler] get node force - 3");
+                f.col(i) = Vector3f::Zero();
+                print_debug("[doSymplecticEuler] get node force - position");
+                f.col(i) += -2 * m_alpha / m_l_i[j] * nabla_kb[j_nabla].transpose() * binormals_padded.col(j);
 
                 // Angle contribution
-                f(i, placeholders::all) += m_beta * start_to_end_theta / L * nabla_psi[j_nabla];
+                print_debug("[doSymplecticEuler] get node force - angle");
+                f.col(i) += m_beta * start_to_end_theta / m_total_rod_length * nabla_psi[j_nabla];
             }
         }
     }
     else
     {
+        // TODO: Implement non-isotropic case
         throw std::runtime_error(std::string(
             "DiscreteElasticRod::doSymplecticEuler(double): Not implemented for non-straight or non-isotropic case"));
     }
 
-    // --- Apply update
+    // --- Apply symplectic euler update
+    print_debug("[doSymplecticEuler] apply euler update");
+    for (uint64_t i = 1; i <= m_n; i++)
+    {
+        print_debug("[doSymplecticEuler] apply euler update: " + std::to_string(i));
 
+        print_debug("[doSymplecticEuler] apply euler update - velocity");
+        m_vertex_velocities.col(i) += delta_time * f.col(i) / m_vertex_mass[i];
+        print_debug("[doSymplecticEuler] apply euler update - position");
+        m_vertex_positions.col(i) += m_vertex_velocities.col(i) * delta_time;
+    }
 
-    (void) delta_time;
-    throw std::runtime_error(std::string("DiscreteElasticRod::doSymplecticEuler(double): Not implemented"));
+    print_debug("[doSymplecticEuler] exit");
 }
