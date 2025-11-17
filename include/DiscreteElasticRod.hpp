@@ -265,13 +265,15 @@ private:
 
     void transportBishopFrame();
 
-    void applyConstraints();
-
     void applyTwist(size_t max_newton_iterations);
 
     bool twistEnergy(const Optimization::VectorXf &theta, double &energy) const;
     bool twistGradient(const Optimization::VectorXf &theta, Optimization::VectorXf &gradient) const;
     bool twistHessian(const Optimization::VectorXf &theta, Optimization::TripletListF &hessian) const;
+
+    bool getConstraints(const Optimization::VectorXf &q_r_x, double &energy) const;
+    bool getConstraintGradient(const Optimization::VectorXf &q_r_x, Optimization::VectorXf &gradient) const;
+    bool getConstraintHessian(const Optimization::VectorXf &q_r_x, Optimization::TripletListF &hessian) const;
 };
 
 #endif
