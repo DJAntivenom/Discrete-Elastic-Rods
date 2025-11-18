@@ -6,8 +6,13 @@ project("Discrete Elastic Rods" VERSION 0.1.0 LANGUAGES C CXX)
 include("cmake/AddCompileOption.cmake")
 
 # add static library. This is the core of the project
-set(DER_TARGET_NAME "discrete_elastic_rods")
+set(DER_TARGET_NAME "discrete_elastic_rods") # Discrete Elastic Rods = DER
+set(DER_LIBARAY_NAME "rods_library")
 add_executable(${DER_TARGET_NAME})
+add_library(${DER_LIBARAY_NAME})
+
+# Define test executable
+add_executable("testrunner")
 
 # set compile features
 target_compile_features(${DER_TARGET_NAME} PUBLIC c_std_23)
@@ -17,6 +22,9 @@ enable_supported_compiler_flag(${DER_TARGET_NAME} FLAGS "-Wall" "-Wextra")
 
 # setup project
 add_subdirectory("src")
+
+# test project
+add_subdirectory("test")
 
 # Force colored output for the ninja generator
 if(CMAKE_GENERATOR STREQUAL "Ninja")
