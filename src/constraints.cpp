@@ -5,7 +5,7 @@
 
 bool DiscreteElasticRod::getConstraints(const Optimization::VectorXf &x_lambda, double &energy) const {
 
-    Eigen::VectorXf m_mass = Eigen::MatrixXf::Ones(m_vertex_positions.size()) / 3.f;
+    Eigen::VectorXf m_mass = Eigen::VectorXf::Ones(m_vertex_positions.size()) / 3.f;
 
     // Eigen::MatrixXf M = Eigen::MatrixXf::Zero(3 * m_n + 12, 3 * m_n + 12);
     // M.block<3, 3>(0, 0) = 4.f * Eigen::MatrixXf::Identity(3, 3);
