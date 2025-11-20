@@ -10,6 +10,7 @@ DiscreteElasticRod::DiscreteElasticRod(uint64_t n,
     m_bishop_frame(3, n + 1),
     m_edge_theta(n + 1),
     m_edge_length(n + 1),
+    m_vertex_mass(n + 2),
     m_l_i(n + 2),
     m_n(n),
     m_radius(radius),
@@ -28,6 +29,8 @@ DiscreteElasticRod::DiscreteElasticRod(uint64_t n,
     m_l_i[0] = m_edge_length[0] * 2;
     m_l_i.segment(1, m_n) = m_edge_length.head(m_n) + m_edge_length.tail(m_n);
     m_l_i[m_n + 1] = m_edge_length[m_n] * 2;
+
+    m_vertex_mass.setConstant(1.0f);
 
     m_total_rod_length = m_edge_length.sum();
 
