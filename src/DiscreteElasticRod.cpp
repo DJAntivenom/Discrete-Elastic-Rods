@@ -66,7 +66,7 @@ void DiscreteElasticRod::update(double delta_time, size_t max_newton_iterations)
     doSymplecticEuler(delta_time);
 
     /// 8. TODO: enforce constraints to guarantee inextensibility
-
+    applyConstraints(max_newton_iterations);
     /// 9. TODO: handle collisions (not discussed in detail in paper, but reference in paper)
 
     /// 10. update natural bishop frame, i.e. apply rotation (P_i in paper)

@@ -1,5 +1,6 @@
 #include <DiscreteElasticRod.hpp>
 #include <Optimization.h>
+#include <common.h>
 
 #include <stdexcept>
 
@@ -72,8 +73,10 @@ bool DiscreteElasticRod::getConstraintGradient(const Optimization::VectorXf &x_l
     for (int i = 0; i <= m_n; i++) {
         C(i) = (x_lambda.segment<3>(3 * (i+1)) - x_lambda.segment<3>(3 * i)).squaredNorm() - m_edge_length(i) * m_edge_length(i);
     }
+    gradient = Eigen::VectorXf::Zero(3 * (m_n + 2) + m_n + 1);
 
-    gradient << X_constraints, C;
+    gradient.head(3 * (m_n + 2)) = X_constraints;
+    gradient.tail(m_n + 1) = C;
 
     return true;
 }
@@ -121,4 +124,60 @@ bool DiscreteElasticRod::getConstraintHessian(const Optimization::VectorXf &x_la
     }
 
     return true;
+}
+
+void DiscreteElasticRod::applyConstraints(size_t max_newton_iterations) {
+    Optimization opt; 
+    opt.optimizer = Optimization::Optimizer::NEWTON;
+    opt.tolerance_exponent = -10;
+    opt.objective_function = [&](const Eigen::VectorXf &x_lambda, double &energy)
+        {
+            return getConstraints(x_lambda, energy);
+        };
+    opt.gradient_function = [&](const Eigen::VectorXf &x_lambda,
+                                double &energy,
+                                Eigen::VectorXf &gradient)
+        {
+            getConstraints(x_lambda, energy);
+            return getConstraintGradient(x_lambda, gradient);
+        };
+    opt.hessian_function = [&](const Optimization::VectorXf &x_lambda,
+                                double &energy,
+                                Optimization::VectorXf &gradient,
+                                Optimization::TripletListF &hessian)
+        {
+            getConstraints(x_lambda, energy);
+            getConstraintGradient(x_lambda, gradient);
+            return getConstraintHessian(x_lambda, hessian);
+        };
+    
+    std::cout << "before entering loop" << std::endl;
+        
+    print_debug("Before entering loop");
+    for (size_t step = 0; step < max_newton_iterations; ++step) {
+        print_debug("At start of loop" + std::to_string(step));
+        Eigen::VectorXf x_lambda = Eigen::VectorXf::Zero(3 * (m_n + 2) + m_n + 1);
+        print_debug("X_lambda created");
+        x_lambda.head(3 * (m_n + 2)) = m_vertex_positions.reshaped(3 * (m_n + 2));
+        print_debug("X_lambda head set");
+        x_lambda.tail(m_n + 1) = Eigen::VectorXf::Constant(m_n + 1, 0.5f);
+        print_debug("X_lambda tail set");
+        
+        print_debug("After initialization in loop" + std::to_string(step));
+        auto result = opt.step(x_lambda);
+        switch (result) 
+        {
+            case Optimization::OptimizationStatus::SUCCESS:
+                m_vertex_positions = x_lambda.head(3 * (m_n + 2)).reshaped(3, m_n + 2).transpose();
+                break;
+            case Optimization::OptimizationStatus::FAILURE:
+                std::cout << "constraint calculation fail" << std::endl;
+                return;
+            case Optimization::OptimizationStatus::CONVERGED:
+                return;
+        }
+    }
+
+    std::cout << "Reached max iterations in constraint calculation" << std::endl;
+    
 }
