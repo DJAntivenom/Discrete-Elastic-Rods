@@ -7,7 +7,7 @@
 bool DiscreteElasticRod::getConstraints(const Optimization::VectorXf &x_lambda, double &energy) const {
     print_debug("DiscreteElasticRod::getConstraints");
 
-    Eigen::VectorXf m_mass = Eigen::VectorXf::Ones(m_vertex_positions.size()) / 3.f;
+    //Eigen::VectorXf m_mass = Eigen::VectorXf::Ones(m_vertex_positions.size()) / 3.f;
 
     // Eigen::MatrixXf M = Eigen::MatrixXf::Zero(3 * m_n + 12, 3 * m_n + 12);
     // M.block<3, 3>(0, 0) = 4.f * Eigen::MatrixXf::Identity(3, 3);
@@ -15,8 +15,8 @@ bool DiscreteElasticRod::getConstraints(const Optimization::VectorXf &x_lambda, 
 
     // M.diagonal().tail(3 * m_n + 6) = m_mass;
 
-    Eigen::MatrixXf M = Eigen::MatrixXf::Zero(3 * (m_n + 2), 3 * (m_n + 2));
-    M.diagonal() = m_mass;
+    // Eigen::MatrixXf M = Eigen::MatrixXf::Zero(3 * (m_n + 2), 3 * (m_n + 2));
+    // M.diagonal() = m_mass;
 
     // Eigen::Quaternionf q = Eigen::Quaternionf(1, 0, 0, 0);
 
@@ -48,7 +48,7 @@ bool DiscreteElasticRod::getConstraints(const Optimization::VectorXf &x_lambda, 
 
     //this is assuming that the output value is a scalar (using y^TMy instead of the yMy^T written in the paper), because otherwise the dimensions of this calculation don't work
     energy = 0.5f * (x_lambda.head(3 * (m_n + 2)) - m_vertex_positions.reshaped(3 * (m_n + 2), 1)).squaredNorm() - C.dot(lambda);
-
+    print_debug("the constraint energy is" + std::to_string(energy));
     return true;
 }
 
@@ -80,6 +80,7 @@ bool DiscreteElasticRod::getConstraintGradient(const Optimization::VectorXf &x_l
     gradient.head(3 * (m_n + 2)) = X_constraints;
     gradient.tail(m_n + 1) = -C;
 
+    print_debug("constraint gradient magnitude is " + std::to_string(gradient.norm()));
     return true;
 }
 
@@ -130,7 +131,6 @@ bool DiscreteElasticRod::getConstraintHessian(const Optimization::VectorXf &x_la
     }
 
 
-
     return true;
 }
 
@@ -160,6 +160,7 @@ void DiscreteElasticRod::applyConstraints(size_t max_newton_iterations) {
         };
 
     std::cout << "before entering loop" << std::endl;
+    print_debug(m_vertex_positions);
 
     print_debug("Before entering loop");
     for (size_t step = 0; step < max_newton_iterations; ++step) {
@@ -168,17 +169,18 @@ void DiscreteElasticRod::applyConstraints(size_t max_newton_iterations) {
         print_debug("X_lambda created");
         x_lambda.head(3 * (m_n + 2)) = m_vertex_positions.reshaped(3 * (m_n + 2), 1);
         print_debug("X_lambda head set");
-        x_lambda.tail(m_n + 1) = Eigen::VectorXf::Constant(m_n + 1, 0.5f);
+        x_lambda.tail(m_n + 1) = Eigen::VectorXf::Constant(m_n + 1, 1.f);
         print_debug("X_lambda tail set");
 
         print_debug("After initialization in loop " + std::to_string(step));
-        auto result = opt.step(x_lambda); // TODO: This crashes
+        auto result = opt.step(x_lambda);
         switch (result)
         {
             case Optimization::OptimizationStatus::SUCCESS:
                 print_debug("Start set vertex positions");
                 m_vertex_positions = x_lambda.head(3 * (m_n + 2)).reshaped(3, m_n + 2);
-                print_debug("End set vertex positions");
+                print_debug("End set vertex positions to ");
+                print_debug(m_vertex_positions);
                 break;
             case Optimization::OptimizationStatus::FAILURE:
                 std::cout << "constraint calculation fail" << std::endl;

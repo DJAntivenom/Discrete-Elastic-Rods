@@ -2,6 +2,8 @@
 
 #include <iostream>
 
+#include "common.h"
+
 DiscreteElasticRod::DiscreteElasticRod(uint64_t n,
                                        float alpha, float beta,
                                        float radius, float theta_zero, float theta_n) :
@@ -71,10 +73,14 @@ void DiscreteElasticRod::update(double delta_time, size_t max_newton_iterations)
 
     /// 10. update natural bishop frame, i.e. apply rotation (P_i in paper)
     transportBishopFrame();
+    print_debug("post transporting bishop frame");
+    print_debug(m_vertex_positions);
 
     /// 11. quasistatic material frame update (Newton according to equation 4 in paper)
     /// => Use newton solver from exercises
     applyTwist(max_newton_iterations);
+    print_debug("post-twist");
+    print_debug(m_vertex_positions);
 }
 
 void DiscreteElasticRod::setVertexPosition(uint64_t vertex_index, const Eigen::Vector3f &new_position)
