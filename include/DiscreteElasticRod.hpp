@@ -64,6 +64,13 @@ private:
     Eigen::VectorXf m_edge_length;
 
     /**
+     * \brief Mass of each vertex
+     *
+     * Dimension: (n+2)
+     */
+    Eigen::VectorXf m_vertex_mass;
+
+    /**
      * \brief Half the size of the voronoi region associated with each vertex.
      *
      * Dimension: (n + 2) but not useful at boundaries
