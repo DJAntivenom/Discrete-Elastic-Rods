@@ -13,6 +13,8 @@
 #include <chrono>
 #include <cmath>
 #include <vector>
+#include <thread>
+#include <chrono>
 
  /* Get rid of annoying unused ... warnings */
 #pragma GCC diagnostic push
@@ -82,6 +84,16 @@ static bool is_simulation_running = false;
  * @brief Controlled in the UI, if true two vectors visualizing the bishop frame are drawn.
  */
 static bool is_bishop_frame_animated = false;
+
+/**
+ * @brief How many seconds to pause the simulation between steps
+ */
+static float simulation_freeze_time_s = 0.0f;
+
+/**
+ * @brief Timestamp of the last time the simulation was updated
+ */
+static std::chrono::time_point<std::chrono::system_clock> last_simulation_time = std::chrono::high_resolution_clock::now();
 
 /**
  * \brief Size of the timestep in seconds.
@@ -259,6 +271,7 @@ static void makeConfigWindow()
     if (ImGui::CollapsingHeader("Simulation settings", ImGuiTreeNodeFlags_DefaultOpen))
     {
         ImGui::InputFloat("Time-step", &delta_time, 0.001);
+        ImGui::InputFloat("Simulation freeze time", &simulation_freeze_time_s, 0.1);
         ImGui::InputInt("Max number of newton iterations", &max_newton_iterations);
 
         if (rods.size() == 0)
@@ -536,9 +549,31 @@ void polyscopeCallback()
     /// Main update of rods
     if (is_simulation_running)
     {
-        for (auto &rod : rods)
+        bool run_simulation = true;
+
+        // Check if we need to skip the update for the slow-mo mode
+        if (simulation_freeze_time_s > 0.0f)
         {
-            rod.update(delta_time, static_cast<size_t>(max_newton_iterations));
+            const auto now = std::chrono::high_resolution_clock::now();
+            const std::chrono::duration<double, std::milli> elapsed = now - last_simulation_time;
+            if (elapsed.count() * 1000 < simulation_freeze_time_s)
+            {
+                // Do not run simulation
+                run_simulation = false;
+            }
+            else
+            {
+                // Update last run time and do not exit
+                last_simulation_time = std::chrono::high_resolution_clock::now();
+            }
+        }
+
+        if (run_simulation)
+        {
+            for (auto &rod : rods)
+            {
+                rod.update(delta_time, static_cast<size_t>(max_newton_iterations));
+            }
         }
     }
 }
