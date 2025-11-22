@@ -12,7 +12,7 @@ static std::vector<Eigen::Matrix3f> nabla_curvature_binormal(
     const Eigen::Matrix3Xf &binormals_padded)
 {
     const Eigen::Vector3f e_i = edges.col(i);
-    const Eigen::Vector3f e_i_min_1 = edges.col(i);
+    const Eigen::Vector3f e_i_min_1 = edges.col(i - 1);
     const Eigen::Vector3f kb_i = binormals_padded.col(i);
 
     float denominator = e_i_min_1.norm() * e_i.norm() + e_i_min_1.dot(e_i);
@@ -41,12 +41,11 @@ void DiscreteElasticRod::doSymplecticEuler(double delta_time)
     using namespace Eigen;
 
     // Calculate forces only at the `n` inner vertices
-    Matrix3Xf f(3, m_n+2);
+    Matrix3Xf f(3, m_n + 2);
     f.setZero();
 
     float start_to_end_theta = m_edge_theta[m_edge_theta.size() - 1] - m_edge_theta[0];
 
-    print_debug("[doSymplecticEuler] get rod values");
     Matrix3Xf binormals = getBinormals();
     Matrix3Xf edges = getEdges();
     Matrix3Xf tangents = getTangents();
@@ -59,23 +58,18 @@ void DiscreteElasticRod::doSymplecticEuler(double delta_time)
     // TODO: Implement case m_is_straight_isotropic = false
 
     // --- Calculate Forces
-    print_debug("[doSymplecticEuler] calculate forces");
-
     if (m_is_straight_isotropic || true) // TODO: Undo debug if
     {
         for (uint64_t i = 1; i <= m_n; i++)
         {
-            print_debug("[doSymplecticEuler] nabla kb");
             auto nabla_kb = nabla_curvature_binormal(i, edges, binormals_padded);
 
             // Equation (9) of paper
-            print_debug("[doSymplecticEuler] nabla psi");
             Vector3f nabla_psi_i_min_1 = binormals_padded.col(i) / (2 * m_edge_length[i - 1]);
             Vector3f nabla_psi_i_plus_1 = binormals_padded.col(i) / (2 * m_edge_length[i]);
             Vector3f nabla_psi_i = -(nabla_psi_i_min_1 + nabla_psi_i_plus_1);
             std::vector<Vector3f> nabla_psi = {nabla_psi_i_min_1, nabla_psi_i, nabla_psi_i_plus_1};
 
-            print_debug("[doSymplecticEuler] get node force: " + std::to_string(i));
             // For each node, consider its neighboring vertices
             for (uint64_t j = i - 1; j <= i + 1; j++)
             {
@@ -83,19 +77,17 @@ void DiscreteElasticRod::doSymplecticEuler(double delta_time)
                 const uint64_t j_nabla = j - i + 1;
 
                 // Position contribution
-                print_debug("[doSymplecticEuler] get node force - 1");
-                (void)m_l_i[j];
-                print_debug("[doSymplecticEuler] get node force - 2");
-                (void)nabla_kb[j_nabla].transpose();
-                print_debug("[doSymplecticEuler] get node force - 3");
-                f.col(i) = Vector3f::Zero();
-                print_debug("[doSymplecticEuler] get node force - position");
-                f.col(i) += -2 * m_alpha / m_l_i[j] * nabla_kb[j_nabla].transpose() * binormals_padded.col(j);
+                Vector3f force_position = -2 * m_alpha / m_l_i[j] * nabla_kb[j_nabla].transpose() * binormals_padded.col(j);
+                f.col(i) += force_position;
 
                 // Angle contribution
-                print_debug("[doSymplecticEuler] get node force - angle");
-                f.col(i) += m_beta * start_to_end_theta / m_total_rod_length * nabla_psi[j_nabla];
+                Vector3f force_angle = m_beta * start_to_end_theta / m_total_rod_length * nabla_psi[j_nabla];
+                f.col(i) += force_angle;
             }
+
+            // TODO: Looks like there's an off by one error, node i==8 has force instead of i==9
+            print_debug("Force on node " + std::to_string(i) + ":");
+            print_debug(f.col(i));
         }
     }
     else
@@ -106,14 +98,9 @@ void DiscreteElasticRod::doSymplecticEuler(double delta_time)
     }
 
     // --- Apply symplectic euler update
-    print_debug("[doSymplecticEuler] apply euler update");
     for (uint64_t i = 1; i <= m_n; i++)
     {
-        print_debug("[doSymplecticEuler] apply euler update: " + std::to_string(i));
-
-        print_debug("[doSymplecticEuler] apply euler update - velocity");
         m_vertex_velocities.col(i) += delta_time * f.col(i) / m_vertex_mass[i];
-        print_debug("[doSymplecticEuler] apply euler update - position");
         m_vertex_positions.col(i) += m_vertex_velocities.col(i) * delta_time;
     }
 
