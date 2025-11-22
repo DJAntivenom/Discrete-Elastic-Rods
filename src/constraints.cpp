@@ -150,11 +150,16 @@ bool DiscreteElasticRod::getConstraintHessian(const Optimization::VectorXf &x_la
 
     for (int i = 1; i <= m_n; i++)
     {
+        Eigen::Vector3f x_min_1 = x_lambda.segment<3>(3 * (i-1));
+        Eigen::Vector3f x_i = x_lambda.segment<3>(3 * i);
+        Eigen::Vector3f x_plus_1 = x_lambda.segment<3>(3 * (i+1));
+        Eigen::Vector2f e_bar = Eigen::Vector2f(m_edge_length(i-1), m_edge_length(i));
+
         Eigen::Matrix3f xi_hessian = maple_hessian(
-            x_lambda.segment<3>(3 * (i-1)),
-            x_lambda.segment<3>(3 * i),
-            x_lambda.segment<3>(3 * (i+1)),
-            Eigen::Vector2f(m_edge_length(i-1), m_edge_length(i)));
+            x_min_1,
+            x_i,
+            x_plus_1,
+            e_bar);
 
         for (int offset = 0; offset < 3; offset++)
         {
@@ -165,6 +170,8 @@ bool DiscreteElasticRod::getConstraintHessian(const Optimization::VectorXf &x_la
             }
         }
     }
+
+    print_debug("[getHessian] exit");
 
     return true;
 }
@@ -200,12 +207,10 @@ void DiscreteElasticRod::applyConstraints(size_t max_newton_iterations) {
     print_debug("Before entering loop");
     for (size_t step = 0; step < max_newton_iterations; ++step) {
         print_debug("At start of loop" + std::to_string(step));
-        Eigen::VectorXf x_lambda = Eigen::VectorXf::Zero(3 * (m_n + 2) + m_n + 1);
+        Eigen::VectorXf x_lambda = Eigen::VectorXf::Zero(3 * (m_n + 2));
         print_debug("X_lambda created");
         x_lambda.head(3 * (m_n + 2)) = m_vertex_positions.reshaped(3 * (m_n + 2), 1);
         print_debug("X_lambda head set");
-        x_lambda.tail(m_n + 1) = Eigen::VectorXf::Constant(m_n + 1, 1.f);
-        print_debug("X_lambda tail set");
 
         print_debug("After initialization in loop " + std::to_string(step));
         auto result = opt.step(x_lambda);
