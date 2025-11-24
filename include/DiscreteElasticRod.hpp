@@ -302,6 +302,12 @@ private:
     void transportBishopFrame();
 
     void applyTwist(size_t max_newton_iterations);
+
+    void applyConstraints(size_t max_newton_iterations);
+
+    bool getConstraints(const Opt::VectorX &q_r_x, Opt::Float &energy) const;
+    bool getConstraintGradient(const Opt::VectorX &q_r_x, Opt::VectorX &gradient) const;
+    bool getConstraintHessian(const Opt::VectorX &q_r_x, Opt::TripletList &hessian) const;
 };
 
 #endif

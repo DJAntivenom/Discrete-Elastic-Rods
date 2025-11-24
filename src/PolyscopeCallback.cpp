@@ -13,6 +13,8 @@
 #include <chrono>
 #include <cmath>
 #include <vector>
+#include <thread>
+#include <chrono>
 
  /* Get rid of annoying unused ... warnings */
 #pragma GCC diagnostic push
@@ -22,6 +24,8 @@
 #include <polyscope/polyscope.h>
 #include <polyscope/surface_mesh.h>
 #include <polyscope/point_cloud.h>
+
+#include "common.h"
 #pragma GCC diagnostic pop
 
 /**
@@ -82,6 +86,16 @@ static bool is_simulation_running = false;
  * @brief Controlled in the UI, if true two vectors visualizing the bishop frame are drawn.
  */
 static bool is_bishop_frame_animated = false;
+
+/**
+ * @brief How many seconds to pause the simulation between steps
+ */
+static float simulation_freeze_time_s = 0.0f;
+
+/**
+ * @brief Timestamp of the last time the simulation was updated
+ */
+static std::chrono::time_point<std::chrono::system_clock> last_simulation_time = std::chrono::system_clock::now();
 
 /**
  * \brief Size of the timestep in seconds.
@@ -263,6 +277,7 @@ static void makeConfigWindow()
     if (ImGui::CollapsingHeader("Simulation settings", ImGuiTreeNodeFlags_DefaultOpen))
     {
         ImGui::InputFloat("Time-step", &delta_time, 0.001);
+        ImGui::InputFloat("Simulation freeze time", &simulation_freeze_time_s, 0.1);
         ImGui::InputInt("Max number of newton iterations", &max_newton_iterations);
 
         if (rods.size() == 0)
@@ -540,9 +555,36 @@ void polyscopeCallback()
     /// Main update of rods
     if (is_simulation_running)
     {
-        for (auto &rod : rods)
+        bool run_simulation = true;
+
+        // Check if we need to skip the update for the slow-mo mode
+        if (simulation_freeze_time_s > 0.0f)
         {
-            rod.update(delta_time, static_cast<size_t>(max_newton_iterations));
+            // Get the number of ticks for the system clock
+            const auto test1 = std::chrono::system_clock::from_time_t(0);
+            const auto test2 = std::chrono::system_clock::from_time_t(1);
+            const uint64_t one_second = (test2 - test1).count();
+
+            const auto now = std::chrono::system_clock::now();
+            const auto elapsed = now - last_simulation_time;
+            if (elapsed.count() < simulation_freeze_time_s * one_second)
+            {
+                // Do not run simulation
+                run_simulation = false;
+            }
+            else
+            {
+                // Update last run time and do not exit
+                last_simulation_time = std::chrono::system_clock::now();
+            }
+        }
+
+        if (run_simulation)
+        {
+            for (auto &rod : rods)
+            {
+                rod.update(delta_time, static_cast<size_t>(max_newton_iterations));
+            }
         }
     }
 }

@@ -1,5 +1,6 @@
 #include <DiscreteElasticRod.hpp>
 
+#include <algorithm>
 #include <stdexcept>
 
 void DiscreteElasticRod::transportBishopFrame()
@@ -21,7 +22,8 @@ void DiscreteElasticRod::transportBishopFrame()
         }
         else
         {
-            const float angle = std::acos(tangents.col(i).dot(tangents.col(i + 1)));
+            const Float angleCos = tangents.col(i).dot(tangents.col(i + 1));
+            const Float angle = std::acos(std::clamp(angleCos, -1.0, 1.0));
             IsometricTransform3D rotation(AngleAxis(angle, binormals.col(i).normalized()));
 
             m_bishop_frame.col(i + 1) = rotation.linear() * m_bishop_frame.col(i);

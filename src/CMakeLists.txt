@@ -33,6 +33,7 @@ target_sources(${DER_LIBRARY_NAME}
     PRIVATE
 
     "bishopFrame.cpp"
+    "constraints.cpp"
     "DiscreteElasticRod.cpp"
     "PolyscopeCallback.cpp"
     "polyscopeHelper.cpp"
