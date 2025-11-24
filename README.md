@@ -6,6 +6,12 @@ We implement a physically-based simulation of discrete elastic rods as described
 
 We use cmake's FetchContent functionality to retrieve our dependencies, however, some general dependencies should be installed system wide. This includes e.g. OpenGL.
 
+One dependency that has to be installed globally is Boost:
+
+```sh
+sudo apt install libboost-all-dev
+```
+
 There are two configure-presets available: One for debug builds and one for release builds.
 For debug builds:
 ```sh
