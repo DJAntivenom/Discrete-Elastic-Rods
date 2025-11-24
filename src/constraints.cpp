@@ -177,6 +177,8 @@ bool DiscreteElasticRod::getConstraintHessian(const Optimization::VectorXf &x_la
 }
 
 void DiscreteElasticRod::applyConstraints(size_t max_newton_iterations) {
+    print_debug("[applyConstraints] enter");
+
     Optimization opt;
     opt.optimizer = Optimization::Optimizer::NEWTON;
     opt.tolerance_exponent = -10;
@@ -201,35 +203,35 @@ void DiscreteElasticRod::applyConstraints(size_t max_newton_iterations) {
             return getConstraintHessian(x_lambda, hessian);
         };
 
-    std::cout << "before entering loop" << std::endl;
+    print_debug("Initial positions:");
     print_debug(m_vertex_positions);
+    print_debug("Initial edge lengths:");
+    print_debug(getEdges().colwise().norm());
 
-    print_debug("Before entering loop");
     for (size_t step = 0; step < max_newton_iterations; ++step) {
-        print_debug("At start of loop" + std::to_string(step));
         Eigen::VectorXf x_lambda = Eigen::VectorXf::Zero(3 * (m_n + 2));
-        print_debug("X_lambda created");
         x_lambda.head(3 * (m_n + 2)) = m_vertex_positions.reshaped(3 * (m_n + 2), 1);
-        print_debug("X_lambda head set");
 
-        print_debug("After initialization in loop " + std::to_string(step));
         auto result = opt.step(x_lambda);
         switch (result)
         {
             case Optimization::OptimizationStatus::SUCCESS:
-                print_debug("Start set vertex positions");
                 m_vertex_positions = x_lambda.head(3 * (m_n + 2)).reshaped(3, m_n + 2);
-                print_debug("End set vertex positions to ");
-                print_debug(m_vertex_positions);
                 break;
             case Optimization::OptimizationStatus::FAILURE:
                 std::cout << "constraint calculation fail" << std::endl;
                 return;
             case Optimization::OptimizationStatus::CONVERGED:
+
+                print_debug("Resulting positions:");
+                print_debug(m_vertex_positions);
+                print_debug("Result edge lengths:");
+                print_debug(getEdges().colwise().norm());
+
+                print_debug("[applyConstraints] converged exit");
                 return;
         }
     }
 
-    std::cout << "Reached max iterations in constraint calculation" << std::endl;
-
+    print_debug("[applyConstraints] exit");
 }
