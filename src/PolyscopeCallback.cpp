@@ -24,6 +24,8 @@
 #include <polyscope/polyscope.h>
 #include <polyscope/surface_mesh.h>
 #include <polyscope/point_cloud.h>
+
+#include "common.h"
 #pragma GCC diagnostic pop
 
 /**
@@ -93,7 +95,7 @@ static float simulation_freeze_time_s = 0.0f;
 /**
  * @brief Timestamp of the last time the simulation was updated
  */
-static std::chrono::time_point<std::chrono::system_clock> last_simulation_time = std::chrono::high_resolution_clock::now();
+static std::chrono::time_point<std::chrono::system_clock> last_simulation_time = std::chrono::system_clock::now();
 
 /**
  * \brief Size of the timestep in seconds.
@@ -554,9 +556,14 @@ void polyscopeCallback()
         // Check if we need to skip the update for the slow-mo mode
         if (simulation_freeze_time_s > 0.0f)
         {
-            const auto now = std::chrono::high_resolution_clock::now();
-            const std::chrono::duration<double, std::milli> elapsed = now - last_simulation_time;
-            if (elapsed.count() * 1000 < simulation_freeze_time_s)
+            // Get the number of ticks for the system clock
+            const auto test1 = std::chrono::system_clock::from_time_t(0);
+            const auto test2 = std::chrono::system_clock::from_time_t(1);
+            const uint64_t one_second = (test2 - test1).count();
+
+            const auto now = std::chrono::system_clock::now();
+            const auto elapsed = now - last_simulation_time;
+            if (elapsed.count() < simulation_freeze_time_s * one_second)
             {
                 // Do not run simulation
                 run_simulation = false;
@@ -564,7 +571,7 @@ void polyscopeCallback()
             else
             {
                 // Update last run time and do not exit
-                last_simulation_time = std::chrono::high_resolution_clock::now();
+                last_simulation_time = std::chrono::system_clock::now();
             }
         }
 
