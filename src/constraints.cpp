@@ -7,51 +7,15 @@
 bool DiscreteElasticRod::getConstraints(const Optimization::VectorXf &x_lambda, double &energy) const {
     print_debug("DiscreteElasticRod::getConstraints");
 
-    //Eigen::VectorXf m_mass = Eigen::VectorXf::Ones(m_vertex_positions.size()) / 3.f;
-
-    // Eigen::MatrixXf M = Eigen::MatrixXf::Zero(3 * m_n + 12, 3 * m_n + 12);
-    // M.block<3, 3>(0, 0) = 4.f * Eigen::MatrixXf::Identity(3, 3);
-    // M.block<3, 3>(3, 3) = m_mass.sum() * Eigen::MatrixXf::Identity(3, 3);
-
-    // M.diagonal().tail(3 * m_n + 6) = m_mass;
-
-    // Eigen::MatrixXf M = Eigen::MatrixXf::Zero(3 * (m_n + 2), 3 * (m_n + 2));
-    // M.diagonal() = m_mass;
-
-    // Eigen::Quaternionf q = Eigen::Quaternionf(1, 0, 0, 0);
-
-    // //TODO: get q_deriv apparently there is also a q.derived() function? but that can't do what i think it does, can it?
-    // Eigen::Quaternionf q_deriv = Eigen::Quaternionf(1, 0, 0, 0);
-
-    // Eigen::Vector3f r = Eigen::Vector3f::Zero();
-    // //TODO: and how are we supposed to get the derivative of r in time either?
-    // Eigen::Vector3f r_deriv = Eigen::Vector3f(1, 0, 0);
-
-    // Eigen::VectorXf y = Eigen::VectorXf::Zero(3 * m_n + 12);
-    // y.segment<3>(0) = (q.inverse() * q_deriv).coeffsScalarFirst().segment<3>(1);
-    // y.segment<3>(3) = r_deriv;
-    // y.tail(3 * m_n + 6) = m_vertex_velocities;
-
-    // Eigen::VectorXf y = m_vertex_velocities.reshaped(3 * (m_n + 2), 1);
-
     Eigen::VectorXf C = Eigen::VectorXf::Zero(m_n + 1);
     for (int i = 0; i <= m_n; i++) {
         float new_edge_length = (x_lambda.segment<3>(3 * (i+1)) - x_lambda.segment<3>(3 * i)).norm();
         // $E_s = 1/2 (|x_{i+1} - x_i| - |\bar{e_i}|)^2$
         C(i) = 0.5f * std::pow(new_edge_length - m_edge_length(i), 2);
     }
-    // C(m_n + 1) = q.squaredNorm() - 1.f;
-    // //TODO: do we need to save rest positions for all vertices?
-    // C.segment<3>(m_n + 2) = q._transformVector(m_vertex_positions.segment<3>(0)) + r - m_vertex_positions.segment<3>(0);
-    // C.segment<3>(m_n + 5) = q._transformVector(m_vertex_positions.segment<3>(1)) + r - m_vertex_positions.segment<3>(1);
 
-    //TODO: how do we get the values for lambda? is that passed in with the optimization vector?
-    // Eigen::VectorXf lambda = x_lambda.tail(m_n + 1);
-
-    //this is assuming that the output value is a scalar (using y^TMy instead of the yMy^T written in the paper), because otherwise the dimensions of this calculation don't work
-    // energy = 0.5f * (x_lambda.head(3 * (m_n + 2)) - m_vertex_positions.reshaped(3 * (m_n + 2), 1)).squaredNorm() - C.dot(lambda);
     energy = C.sum();
-    print_debug("the constraint energy is" + std::to_string(energy));
+    print_debug("the constraint energy is " + std::to_string(energy));
     return true;
 }
 
@@ -233,5 +197,9 @@ void DiscreteElasticRod::applyConstraints(size_t max_newton_iterations) {
         }
     }
 
+    print_debug("Resulting positions:");
+    print_debug(m_vertex_positions);
+    print_debug("Result edge lengths:");
+    print_debug(getEdges().colwise().norm());
     print_debug("[applyConstraints] exit");
 }

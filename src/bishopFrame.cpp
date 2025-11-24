@@ -22,7 +22,8 @@ void DiscreteElasticRod::transportBishopFrame()
         }
         else
         {
-            const float angle = std::acos(tangents.col(i).dot(tangents.col(i + 1)));
+            const float angleCos = tangents.col(i).dot(tangents.col(i + 1));
+            const float angle = std::acos(std::clamp(angleCos, -1.0f, 1.0f));
             Transform<float, 3, Affine> rotation(AngleAxisf(angle, binormals.col(i).normalized()));
 
             m_bishop_frame.col(i + 1) = rotation.linear() * m_bishop_frame.col(i);
