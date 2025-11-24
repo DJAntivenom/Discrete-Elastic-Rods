@@ -17,8 +17,12 @@ add_executable("testrunner")
 # set compile features
 target_compile_features(${DER_TARGET_NAME} PUBLIC c_std_23)
 target_compile_features(${DER_TARGET_NAME} PUBLIC cxx_std_17)
+target_compile_features(${DER_LIBRARY_NAME} PUBLIC c_std_23)
+target_compile_features(${DER_LIBRARY_NAME} PUBLIC cxx_std_17)
 set_target_properties(${DER_TARGET_NAME} PROPERTIES C_EXTENSIONS OFF CXX_EXTENSIONS OFF)
 enable_supported_compiler_flag(${DER_TARGET_NAME} FLAGS "-Wall" "-Wextra")
+set_target_properties(${DER_LIBRARY_NAME} PROPERTIES C_EXTENSIONS OFF CXX_EXTENSIONS OFF)
+enable_supported_compiler_flag(${DER_LIBRARY_NAME} FLAGS "-Wall" "-Wextra")
 
 # setup project
 add_subdirectory("src")
