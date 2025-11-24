@@ -50,6 +50,9 @@ void DiscreteElasticRod::doSymplecticEuler(double delta_time)
     Matrix3Xf edges = getEdges();
     Matrix3Xf tangents = getTangents();
 
+    VectorXf actual_edge_lengths = edges.colwise().norm();
+    float actual_rod_length = actual_edge_lengths.sum();
+
     // Binormals padded with start and end
     Matrix3Xf binormals_padded(3, m_n + 2);
     binormals_padded.setZero();
@@ -65,8 +68,8 @@ void DiscreteElasticRod::doSymplecticEuler(double delta_time)
             auto nabla_kb = nabla_curvature_binormal(i, edges, binormals_padded);
 
             // Equation (9) of paper
-            Vector3f nabla_psi_i_min_1 = binormals_padded.col(i) / (2 * m_edge_length[i - 1]);
-            Vector3f nabla_psi_i_plus_1 = binormals_padded.col(i) / (2 * m_edge_length[i]);
+            Vector3f nabla_psi_i_min_1 = binormals_padded.col(i) / (2 * actual_edge_lengths[i - 1]);
+            Vector3f nabla_psi_i_plus_1 = binormals_padded.col(i) / (2 * actual_edge_lengths[i]);
             Vector3f nabla_psi_i = -(nabla_psi_i_min_1 + nabla_psi_i_plus_1);
             std::vector<Vector3f> nabla_psi = {nabla_psi_i_min_1, nabla_psi_i, nabla_psi_i_plus_1};
 
@@ -81,7 +84,7 @@ void DiscreteElasticRod::doSymplecticEuler(double delta_time)
                 f.col(i) += force_position;
 
                 // Angle contribution
-                Vector3f force_angle = m_beta * start_to_end_theta / m_total_rod_length * nabla_psi[j_nabla];
+                Vector3f force_angle = m_beta * start_to_end_theta / actual_rod_length * nabla_psi[j_nabla];
                 f.col(i) += force_angle;
             }
 
