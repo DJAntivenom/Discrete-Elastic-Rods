@@ -20,25 +20,54 @@
 
 class DiscreteElasticRod
 {
+public:
+    /**
+     * @brief The datatype of the values stored in this rod.
+     */
+    using Float = double;
+
+    /// Vectors
+    using Vector2 = Eigen::Vector2<Float>;
+    using Vector3 = Eigen::Vector3<Float>;
+    using VectorX = Eigen::VectorX<Float>;
+
+    /// Fixed-size matrices
+    using Matrix2 = Eigen::Matrix2<Float>;
+    using Matrix3 = Eigen::Matrix3<Float>;
+
+    /// Partially-dynamic matrices
+    using Matrix3X = Eigen::Matrix3X<Float>;
+    using MatrixX3 = Eigen::MatrixX3<Float>;
+    using Matrix4X = Eigen::Matrix4X<Float>;
+
+    /// Rotations
+    using AngleAxis = Eigen::AngleAxis<Float>;
+    using AffineTransform3D = Eigen::Transform<Float, 3, Eigen::Affine>;
+    using GeneralTransform3D = Eigen::Transform<Float, 3, Eigen::Projective>;
+    using IsometricTransform3D = Eigen::Transform<Float, 3, Eigen::Isometry>;
+
+    /// Optimizer
+    using Opt = Optimization<Float>;
+
 private:
     /**
      * \brief Matrix of vertex positionts, 3x(n+2)
      *
      * Stores positions as column vectors of all vertices (including boundaries).
      */
-    Eigen::Matrix3Xf m_vertex_positions;
+    Matrix3X m_vertex_positions;
 
     /**
      * \brief Matrix of vertex velocities, 3x(n+2)
      *
      * Stores velocities as column vectors of all vertices (including boundaries).
      */
-    Eigen::Matrix3Xf m_vertex_velocities;
+    Matrix3X m_vertex_velocities;
 
     /**
      * \brief Initial bishop frame vector u at edge 0.
      */
-    Eigen::Vector3f m_bishop_frame_vector;
+    Vector3 m_bishop_frame_vector;
 
     /**
      * \brief Column i is bishop-frame vector u_i.
@@ -47,40 +76,40 @@ private:
      *
      * The frames are updated after every update step in `transportBishopFrame`.
      */
-    Eigen::Matrix3Xf m_bishop_frame;
+    Matrix3X m_bishop_frame;
 
     /**
      * \brief Angle of rotation theta for each edge compared to bishop frame.
      *
      * Dimension: (n+1)
      */
-    Eigen::VectorXf m_edge_theta;
+    VectorX m_edge_theta;
 
     /**
      * \brief Length of each edge, calculated in constructor
      *
      * Dimension: (n+1)
      */
-    Eigen::VectorXf m_edge_length;
+    VectorX m_edge_length;
 
     /**
      * \brief Mass of each vertex
      *
      * Dimension: (n+2)
      */
-    Eigen::VectorXf m_vertex_mass;
+    VectorX m_vertex_mass;
 
     /**
      * \brief Half the size of the voronoi region associated with each vertex.
      *
      * Dimension: (n + 2) but not useful at boundaries
      */
-    Eigen::VectorXf m_l_i;
+    VectorX m_l_i;
 
     /**
      * \brief The total length of the rod.
      */
-    float m_total_rod_length;
+    Float m_total_rod_length;
 
     /**
      * \brief Corresponds to n from the paper, i.e. count of all internal vertices.
@@ -100,17 +129,17 @@ private:
     /**
      * \brief Material parameters.
      */
-    float m_alpha, m_beta;
+    Float m_alpha, m_beta;
 
     /**
      * \brief \overbar{B}^j from the paper.
      */
-    Eigen::Matrix2f m_B_matrix;
+    Matrix2 m_B_matrix;
 
     /**
      * @brief \overbar{\omega} from the paper.
      */
-    Eigen::Matrix4Xf m_w_overbar;
+    Matrix4X m_w_overbar;
 
 public:
     /**
@@ -119,8 +148,8 @@ public:
      *  corresponding to the constrained boundary vertices.
      */
     DiscreteElasticRod(uint64_t n,
-                       float alpha, float beta,
-                       float radius = 0.5f, float theta_zero = 0.f, float theta_n = 0.f);
+                       Float alpha, Float beta,
+                       float radius = 0.05f, float theta_zero = 0.f, float theta_n = 0.f);
     virtual ~DiscreteElasticRod() = default;
 
     /**
@@ -133,34 +162,34 @@ public:
      * @brief Get the stacked vertex positions.
      * @return A column-vector of size 3*(n+2) with the positions of the vertices.
      */
-    inline const Eigen::Matrix3Xf &getVertexPositions() const { return m_vertex_positions; }
+    inline const Matrix3X &getVertexPositions() const { return m_vertex_positions; }
 
     /**
      * @brief Set vertex position.
      */
-    void setVertexPosition(uint64_t vertex_index, const Eigen::Vector3f &new_position);
+    void setVertexPosition(uint64_t vertex_index, const Vector3 &new_position);
 
     /**
      * @brief Get the vertex velocities.
      * @return A matrix of size 3x(n+2) with the velocities of the vertices.
      */
-    inline const Eigen::Matrix3Xf &getVertexVelocities() const { return m_vertex_velocities; }
+    inline const Matrix3X &getVertexVelocities() const { return m_vertex_velocities; }
 
     /**
      * \brief Get u_i in the columns of the returned matrix.
      */
-    inline const Eigen::Matrix3Xf &getBishopFrame() const { return m_bishop_frame; }
+    inline const Matrix3X &getBishopFrame() const { return m_bishop_frame; }
 
     /**
     * @brief Get the stacked edge angles.
     * @return A column-vector of size n with the angles (compared to bishop from) of the vertices.
     */
-    inline const Eigen::VectorXf &getEdgeThetas() const { return m_edge_theta; }
+    inline const VectorX &getEdgeThetas() const { return m_edge_theta; }
 
     /**
     * @brief Set the edge angle boundary conditions.
     */
-    inline void setBoundaryEdgeThetas(float theta_start, float theta_end)
+    inline void setBoundaryEdgeThetas(Float theta_start, Float theta_end)
     {
         m_edge_theta[0] = theta_start;
         m_edge_theta[m_edge_theta.size() - 1] = theta_end;
@@ -169,13 +198,13 @@ public:
     /**
      * \brief Get the lengths of the edges.
      */
-    inline const Eigen::VectorXf &getEdgeLengths() const { return m_edge_length; }
+    inline const VectorX &getEdgeLengths() const { return m_edge_length; }
 
     /**
      * @brief Get $e_i$ from the paper, i.e. the vectors representing segments between vertices.
      * @return A matrix, where each of the (n+1) columns is one edge.
      */
-    inline Eigen::Matrix3Xf getEdges() const
+    inline Matrix3X getEdges() const
     {
         return m_vertex_positions.block(0, 1, 3, m_n + 1)
             - m_vertex_positions.block(0, 0, 3, m_n + 1);
@@ -185,7 +214,7 @@ public:
      * \brief Get $t_i$ from the paper, i.e. discrete tangents.
      * \return A matrix, where each of the (n+1) columns is one tangent.
      */
-    inline Eigen::Matrix3Xf getTangents() const
+    inline Matrix3X getTangents() const
     {
         return getEdges().colwise().normalized();
     }
@@ -194,7 +223,7 @@ public:
      * @brief Get kappa_i from the paper, i.e. discrete curvature at vertices.
      * @return A vector of length n containing discrete curvature at each inner vertex.
      */
-    Eigen::VectorXf getCurvature() const
+    VectorX getCurvature() const
     {
         const auto edges = getTangents();
 
@@ -211,13 +240,13 @@ public:
      * @return A 3 x n matrix, where column i is the binormal at inner vertex i, i.e.
      * global vertex (i+1), because our boundary vertex is 0.
      */
-    Eigen::Matrix3Xf getBinormals() const {
+    Matrix3X getBinormals() const {
         /* instead of normalizing the corss-product and scaling by curvature,
            we use (1) from the paper which is robust if edges are collinear
            (normalizing of a 0-vector, i.e. result of collinear x-product, is
            undefined)*/
         const auto edges = getEdges();
-        Eigen::Matrix3Xf binormals(3, m_n);
+        Matrix3X binormals(3, m_n);
         for (uint32_t col_index = 0; col_index < m_n; ++col_index)
         {
             binormals.col(col_index) = 2 * edges.col(col_index).cross(edges.col(col_index + 1));
@@ -235,7 +264,7 @@ public:
      *
      * The values at the boundary vertices is undefined.
      */
-    Eigen::Matrix4Xf getMaterialCurvature(const Eigen::VectorXf &theta) const;
+    Matrix4X getMaterialCurvature(const VectorX &theta) const;
 
     /**
      * \brief Get the bishop frame {x, u, v} at alpha along the rod.
@@ -247,7 +276,7 @@ public:
      * \return The position x interpolated along the rod in the first row
      * followed by u and v.
      */
-    Eigen::Matrix3f getInterpolatedBishopFrame(double alpha);
+    Matrix3 getInterpolatedBishopFrame(double alpha);
 
     /**
      * \brief Randomize the positions of the vertices within an area around the initial position.
@@ -273,10 +302,6 @@ private:
     void transportBishopFrame();
 
     void applyTwist(size_t max_newton_iterations);
-
-    bool twistEnergy(const Optimization::VectorXf &theta, double &energy) const;
-    bool twistGradient(const Optimization::VectorXf &theta, Optimization::VectorXf &gradient) const;
-    bool twistHessian(const Optimization::VectorXf &theta, Optimization::TripletListF &hessian) const;
 };
 
 #endif

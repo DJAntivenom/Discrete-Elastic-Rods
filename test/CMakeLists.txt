@@ -7,4 +7,4 @@ target_sources("testrunner" # Target name
         "testExample.cpp"
 )
 
-target_link_libraries("testrunner" PRIVATE Boost::headers Boost::unit_test_framework ${DER_LIBARAY_NAME})
+target_link_libraries("testrunner" PRIVATE Boost::headers Boost::unit_test_framework ${DER_LIBRARY_NAME})

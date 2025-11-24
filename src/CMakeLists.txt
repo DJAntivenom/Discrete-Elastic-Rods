@@ -16,25 +16,24 @@ FetchContent_MakeAvailable(polyscope eigen)
 
 # setup executable components
 ## add include directories
-target_include_directories(${DER_LIBARAY_NAME}
+target_include_directories(${DER_LIBRARY_NAME}
   PUBLIC
   "${PROJECT_SOURCE_DIR}/include"
 )
 
 ## add dependencies
-target_link_libraries(${DER_LIBARAY_NAME}
+target_link_libraries(${DER_LIBRARY_NAME}
   PUBLIC
   polyscope
   Eigen3::Eigen
 )
 
 ## add sources
-target_sources(${DER_LIBARAY_NAME}
-    PUBLIC
+target_sources(${DER_LIBRARY_NAME}
+    PRIVATE
 
     "bishopFrame.cpp"
     "DiscreteElasticRod.cpp"
-    "Optimization.cpp"
     "PolyscopeCallback.cpp"
     "polyscopeHelper.cpp"
     "symplecticEuler.cpp"
@@ -44,4 +43,4 @@ target_sources(${DER_TARGET_NAME}
   PRIVATE
   "main.cpp"
 )
-target_link_libraries(${DER_TARGET_NAME} PUBLIC ${DER_LIBARAY_NAME})
+target_link_libraries(${DER_TARGET_NAME} PUBLIC ${DER_LIBRARY_NAME})

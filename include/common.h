@@ -6,9 +6,12 @@
 #endif
 
 #ifdef PRINT_DEBUG
-#define print_debug(str) do { std::cout << str << std::endl; } while (0)
+#define print_debug(str) std::cout << "[" << __func__ << "] " << (str) << std::endl
 #else
-#define print_debug(str) do { } while (0)
+#define print_debug(str) \
+    do                   \
+    {                    \
+    } while (0)
 #endif
 
-#endif //DISCRETE_ELASTIC_RODS_COMMON_H
+#endif // DISCRETE_ELASTIC_RODS_COMMON_H

@@ -3,10 +3,11 @@
 #include <iostream>
 
 DiscreteElasticRod::DiscreteElasticRod(uint64_t n,
-                                       float alpha, float beta,
+                                       Float alpha, Float beta,
                                        float radius, float theta_zero, float theta_n) :
     m_vertex_positions(3, (n + 2)),
     m_vertex_velocities(3, (n + 2)),
+    m_bishop_frame_vector{0., 0., 1.},
     m_bishop_frame(3, n + 1),
     m_edge_theta(n + 1),
     m_edge_length(n + 1),
@@ -18,8 +19,8 @@ DiscreteElasticRod::DiscreteElasticRod(uint64_t n,
     m_alpha(alpha),
     m_beta(beta)
 {
-    Eigen::Vector3f start{ -0.5f, 0.f, 0.f };
-    Eigen::Vector3f increment{ 0.1f, 0.0f, 0.0f };
+    Vector3 start{ -0.5f, 0.f, 0.f };
+    Vector3 increment{ 0.1f, 0.0f, 0.0f };
     for (uint64_t i = 0; i < n + 2; ++i)
     {
         m_vertex_positions.col(i) = start + i * increment;
@@ -36,7 +37,6 @@ DiscreteElasticRod::DiscreteElasticRod(uint64_t n,
 
     m_vertex_velocities.setZero(); //starting at rest
 
-    m_bishop_frame_vector = Eigen::Vector3f(0.f, 0.f, 0.1f); //perpendicular to first edge
     /**
      * TODO: once we don't just use naturally straigth rods anymore, this has to be done
      * differently.
@@ -48,7 +48,7 @@ DiscreteElasticRod::DiscreteElasticRod(uint64_t n,
     m_edge_theta(n) = theta_n;
 
     /** TODO: allow anisotropic rods, by minimizing E_bend wrt. B */
-    m_B_matrix = Eigen::Vector2f::Constant(alpha).asDiagonal();
+    m_B_matrix = Vector2::Constant(alpha).asDiagonal();
 
     m_w_overbar = getMaterialCurvature(m_edge_theta);
 }
@@ -77,7 +77,7 @@ void DiscreteElasticRod::update(double delta_time, size_t max_newton_iterations)
     applyTwist(max_newton_iterations);
 }
 
-void DiscreteElasticRod::setVertexPosition(uint64_t vertex_index, const Eigen::Vector3f &new_position)
+void DiscreteElasticRod::setVertexPosition(uint64_t vertex_index, const Vector3 &new_position)
 {
     m_vertex_positions.col(vertex_index) = new_position;
 
@@ -93,7 +93,8 @@ void DiscreteElasticRod::randomizeVertexPositions()
     transportBishopFrame();
 }
 
-static Eigen::Vector3f hsvToRgb(const Eigen::Vector3f &hsv)
+template <class Vector3>
+static Vector3 hsvToRgb(const Vector3 &hsv)
 {
     const float hue = hsv.x();
     const float sat = hsv.y();
@@ -114,25 +115,24 @@ static Eigen::Vector3f hsvToRgb(const Eigen::Vector3f &hsv)
     switch (hue_integer)
     {
     case 0:
-        return Eigen::Vector3f{ val, t, p };
+        return Vector3{ val, t, p };
     case 1:
-        return Eigen::Vector3f{ q, val, p };
+        return Vector3{ q, val, p };
     case 2:
-        return Eigen::Vector3f{ p, val, t };
+        return Vector3{ p, val, t };
     case 3:
-        return Eigen::Vector3f{ p, q, val };
+        return Vector3{ p, q, val };
     case 4:
-        return Eigen::Vector3f{ t, p, val };
+        return Vector3{ t, p, val };
     case 5:
     default:
-        return Eigen::Vector3f{ val, p, q };
+        return Vector3{ val, p, q };
     }
 }
 
 polyscope::SurfaceMesh *DiscreteElasticRod::registerSurfaceMesh(const std::string &name,
                                                                 uint32_t vertices_per_ring) const
 {
-    using namespace Eigen;
     constexpr float saturation = 1.f;
     constexpr float value = 1.f;
 
@@ -154,9 +154,9 @@ polyscope::SurfaceMesh *DiscreteElasticRod::registerSurfaceMesh(const std::strin
      */
     const uint32_t number_of_faces = (number_of_centerline_anchors - 1) * vertices_per_ring * 2 + 2 * vertices_per_ring;
 
-    MatrixX3f colors(number_of_vertices, 3);
-    MatrixX3f vertices(number_of_vertices, 3);
-    MatrixX3i faces(number_of_faces, 3);
+    MatrixX3 colors(number_of_vertices, 3);
+    MatrixX3 vertices(number_of_vertices, 3);
+    Eigen::MatrixX3i faces(number_of_faces, 3);
 
     const auto tangents = getTangents();
 
@@ -168,12 +168,12 @@ polyscope::SurfaceMesh *DiscreteElasticRod::registerSurfaceMesh(const std::strin
     uint32_t vertex_index = 0, face_index = 0;
     for (uint32_t edge_index = 0; edge_index <= m_n; ++edge_index)
     {
-        const Vector3f anchor_position = m_vertex_positions.col(edge_index);
+        const Vector3 anchor_position = m_vertex_positions.col(edge_index);
         /* axis of rotation is length-weighted average of vertex-adjacent edges */
-        const Vector3f axis_of_rotation = (edge_index > 0
-                                           ? (tangents.col(edge_index) * m_edge_length[edge_index]
-                                              + tangents.col(edge_index - 1) * m_edge_length[edge_index - 1]).normalized()
-                                           : tangents.col(edge_index));
+        const Vector3 axis_of_rotation = (edge_index > 0
+                                          ? (tangents.col(edge_index) * m_edge_length[edge_index]
+                                             + tangents.col(edge_index - 1) * m_edge_length[edge_index - 1]).normalized()
+                                          : tangents.col(edge_index));
 
         for (uint32_t ring_index = 0; ring_index < vertices_per_ring; ++ring_index, ++vertex_index)
         {
@@ -189,8 +189,8 @@ polyscope::SurfaceMesh *DiscreteElasticRod::registerSurfaceMesh(const std::strin
             const float angle = ring_angle - theta;
 
             vertices.row(vertex_index).transpose() = anchor_position +
-                AngleAxisf(angle, axis_of_rotation) * m_bishop_frame.col(edge_index) * m_radius;
-            colors.row(vertex_index) = hsvToRgb({ angle, saturation, value });
+                AngleAxis(angle, axis_of_rotation) * m_bishop_frame.col(edge_index) * m_radius;
+            colors.row(vertex_index) = hsvToRgb<Vector3>({ angle, saturation, value });
 
             /* faces are connected to previous ring */
             if (edge_index > 0)
@@ -217,8 +217,8 @@ polyscope::SurfaceMesh *DiscreteElasticRod::registerSurfaceMesh(const std::strin
         const float angle = (2 * M_PI) * ring_index * inv_vertices_per_ring
             - m_edge_theta[m_n];
         vertices.row(vertex_index).transpose() = m_vertex_positions.col(m_n + 1) +
-            AngleAxisf(angle, tangents.col(m_n)) * m_bishop_frame.col(m_n) * m_radius;
-        colors.row(vertex_index) = hsvToRgb({ angle, saturation, value });
+            AngleAxis(angle, tangents.col(m_n)) * m_bishop_frame.col(m_n) * m_radius;
+        colors.row(vertex_index) = hsvToRgb<Vector3>({ angle, saturation, value });
 
         /* faces are connected to previous ring */
         const uint32_t next_vertex = (ring_index == vertices_per_ring - 1
@@ -267,11 +267,9 @@ polyscope::SurfaceMesh *DiscreteElasticRod::registerSurfaceMesh(const std::strin
     return mesh;
 }
 
-Eigen::Matrix4Xf DiscreteElasticRod::getMaterialCurvature(const Eigen::VectorXf &theta) const
+DiscreteElasticRod::Matrix4X DiscreteElasticRod::getMaterialCurvature(const VectorX &theta) const
 {
-    using namespace Eigen;
-
-    Matrix4Xf curvature(4, m_n + 2);
+    Matrix4X curvature(4, m_n + 2);
     const auto binormals = getBinormals();
     const auto tangents = getTangents();
 
@@ -280,8 +278,8 @@ Eigen::Matrix4Xf DiscreteElasticRod::getMaterialCurvature(const Eigen::VectorXf 
         /** NOTE: need to subtract 1 in binormals.col because binormals is just inner vertices */
         {
             const uint32_t j = vertex - 1;
-            const Vector3f m_1_i_min_1 = AngleAxisf(theta[j], tangents.col(j)) * m_bishop_frame.col(j);
-            const Vector3f m_2_i_min_1 = AngleAxisf(theta[j] + M_PI_2, tangents.col(j)) * m_bishop_frame.col(j);
+            const Vector3 m_1_i_min_1 = AngleAxis(theta[j], tangents.col(j)) * m_bishop_frame.col(j);
+            const Vector3 m_2_i_min_1 = AngleAxis(theta[j] + M_PI_2, tangents.col(j)) * m_bishop_frame.col(j);
             curvature.block<2, 1>(0, vertex) <<
                 binormals.col(vertex - 1).dot(m_2_i_min_1),
                 binormals.col(vertex - 1).dot(m_1_i_min_1);
@@ -289,8 +287,8 @@ Eigen::Matrix4Xf DiscreteElasticRod::getMaterialCurvature(const Eigen::VectorXf 
 
         {
             const uint32_t j = vertex;
-            const Vector3f m_1_i = AngleAxisf(theta[j], tangents.col(j)) * m_bishop_frame.col(j);
-            const Vector3f m_2_i = AngleAxisf(theta[j] + M_PI_2, tangents.col(j)) * m_bishop_frame.col(j);
+            const Vector3 m_1_i = AngleAxis(theta[j], tangents.col(j)) * m_bishop_frame.col(j);
+            const Vector3 m_2_i = AngleAxis(theta[j] + M_PI_2, tangents.col(j)) * m_bishop_frame.col(j);
             curvature.block<2, 1>(2, vertex) <<
                 binormals.col(vertex - 1).dot(m_2_i),
                 binormals.col(vertex - 1).dot(m_1_i);

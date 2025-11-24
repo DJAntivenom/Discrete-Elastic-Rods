@@ -141,8 +141,8 @@ static void updateRodHandles(int rod_index)
     const float direction_offset = 0.2f;
     const float rotation_offset = 0.1f;
 
-    Eigen::MatrixX3f vertex_positions = rods[rod_index].getVertexPositions().reshaped(3, Eigen::AutoSize).transpose();
-    Eigen::VectorXf edge_thetas = rods[rod_index].getEdgeThetas();
+    Eigen::MatrixX3f vertex_positions = rods[rod_index].getVertexPositions().transpose().cast<float>();
+    Eigen::VectorXf edge_thetas = rods[rod_index].getEdgeThetas().cast<float>();
 
     // Direction indicator
     uint64_t vertex_count = vertex_positions.rows();
@@ -218,8 +218,8 @@ static void applyHandleUpdate(uint64_t handle_index, const Eigen::Vector3f &new_
     uint64_t handle_type = handle_index % handles_count;
     uint64_t rod_index = handle_index / handles_count;
 
-    Eigen::VectorXf edge_lengths = rods[rod_index].getEdgeLengths();
-    Eigen::Matrix3Xf vertex_positions = rods[rod_index].getVertexPositions();
+    Eigen::VectorXf edge_lengths = rods[rod_index].getEdgeLengths().cast<float>();
+    Eigen::Matrix3Xf vertex_positions = rods[rod_index].getVertexPositions().cast<float>();
 
     float prev_length;
     Eigen::Vector3f neighbour_position;
@@ -230,14 +230,18 @@ static void applyHandleUpdate(uint64_t handle_index, const Eigen::Vector3f &new_
         prev_length = edge_lengths[0];
         neighbour_position = vertex_positions.col(1);
         // Set position, but preserve length
-        rods[rod_index].setVertexPosition(0, neighbour_position + (new_position - neighbour_position).normalized() * prev_length);
+        rods[rod_index].setVertexPosition(0,
+                                          (neighbour_position + (new_position - neighbour_position).normalized() * prev_length)
+                                          .cast<typename DiscreteElasticRod::Float>());
         updateRodHandles(rod_index);
         break;
     case 3:
         prev_length = edge_lengths[edge_lengths.size() - 1];
         neighbour_position = vertex_positions.col(vertex_positions.cols() - 2);
         // Set position, but preserve length
-        rods[rod_index].setVertexPosition(vertex_positions.cols() - 1, neighbour_position + (new_position - neighbour_position).normalized() * prev_length);
+        rods[rod_index].setVertexPosition(vertex_positions.cols() - 1,
+                                          (neighbour_position + (new_position - neighbour_position).normalized() * prev_length)
+                                          .cast<typename DiscreteElasticRod::Float>());
         updateRodHandles(rod_index);
         break;
     default:
@@ -378,7 +382,7 @@ static void updateViewerData()
             polyscope::options::transparencyMode = polyscope::TransparencyMode::Simple;
             mesh->setTransparency(0.5f);
 
-            const Eigen::MatrixX3f vertex_positions = rods[rod_index].getVertexPositions().transpose();
+            const Eigen::MatrixX3f vertex_positions = rods[rod_index].getVertexPositions().transpose().cast<float>();
 
             auto lines = polyscope::registerCurveNetworkLine("Centerline_" + std::to_string(rod_index), vertex_positions);
 
@@ -493,7 +497,7 @@ static void updateViewerData()
         const uint64_t rod_count = rods.size();
         for (uint64_t rod_index = 0; rod_index < rod_count; ++rod_index)
         {
-            const auto bishop_frame = rods[rod_index].getInterpolatedBishopFrame(alpha);
+            const auto bishop_frame = rods[rod_index].getInterpolatedBishopFrame(alpha).cast<float>();
 
             Eigen::Matrix<float, 2, 3> u;
             u.row(0) = bishop_frame.row(0);

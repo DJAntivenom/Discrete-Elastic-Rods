@@ -1,12 +1,13 @@
-#include <Optimization.h>
+#include "Optimization.h"
 
 #include <cassert>
 #include <iostream>
 
-Optimization::OptimizationStatus Optimization::step(VectorXf &y)
+template <class T>
+typename Optimization<T>::OptimizationStatus Optimization<T>::step(VectorX &y)
 {
 
-    VectorXf dy;
+    VectorX dy;
     double initial_objective_value;
     OptimizationStatus status = OptimizationStatus::FAILURE;
     switch (optimizer)
@@ -30,10 +31,11 @@ Optimization::OptimizationStatus Optimization::step(VectorXf &y)
     return status;
 }
 
-Optimization::OptimizationStatus Optimization::getDirectionGradientDescent(const VectorXf &y, VectorXf &dy,
-                                                                           double &initial_objective_value)
+template <class T>
+typename Optimization<T>::OptimizationStatus Optimization<T>::getDirectionGradientDescent(const VectorX &y, VectorX &dy,
+                                                                                          Float &initial_objective_value)
 {
-    VectorXf gradient;
+    VectorX gradient;
     if (!gradient_function(y, initial_objective_value, gradient))
     {
         assert(0);
@@ -47,11 +49,12 @@ Optimization::OptimizationStatus Optimization::getDirectionGradientDescent(const
     return OptimizationStatus::SUCCESS;
 }
 
-Optimization::OptimizationStatus Optimization::getDirectionNewton(const VectorXf &y, VectorXf &dy,
-                                                                  double &initial_objective_value)
+template <class T>
+typename Optimization<T>::OptimizationStatus Optimization<T>::getDirectionNewton(const VectorX &y, VectorX &dy,
+                                                                                 Float &initial_objective_value)
 {
-    VectorXf gradient;
-    TripletListF hessian;
+    VectorX gradient;
+    TripletList hessian;
 
     if (!hessian_function(y, initial_objective_value, gradient, hessian))
     {
@@ -69,14 +72,15 @@ Optimization::OptimizationStatus Optimization::getDirectionNewton(const VectorXf
     return linear_solve_success ? OptimizationStatus::SUCCESS : OptimizationStatus::FAILURE;
 }
 
-bool Optimization::lineSearch(VectorXf &y, const VectorXf &dy, double initial_objective_value)
+template <class T>
+bool Optimization<T>::lineSearch(VectorX &y, const VectorX &dy, Float initial_objective_value)
 {
     double alpha = 1.0;
 
     int max_steps = 50;
     for (int i = 0; i < max_steps; i++)
     {
-        VectorXf y_line_search = y + alpha * dy;
+        VectorX y_line_search = y + alpha * dy;
 
         double new_objective_value;
         if (objective_function(y_line_search, new_objective_value))
@@ -97,22 +101,24 @@ bool Optimization::lineSearch(VectorXf &y, const VectorXf &dy, double initial_ob
     return false;
 }
 
-bool Optimization::lineSearch(VectorXf &y, const VectorXf &dy)
+template <class T>
+bool Optimization<T>::lineSearch(VectorX &y, const VectorX &dy)
 {
     double initial_objective_value;
     objective_function(y, initial_objective_value);
     return lineSearch(y, dy, initial_objective_value);
 }
 
-bool Optimization::linearSolve(const TripletListF &hessian, const VectorXf &b, VectorXf &x)
+template <class T>
+bool Optimization<T>::linearSolve(const TripletList &hessian, const VectorX &b, VectorX &x)
 {
     Solver solver;
 
-    SparseMatrixF A(b.rows(), b.rows());
+    SparseMatrix A(b.rows(), b.rows());
     A.setFromTriplets(hessian.begin(), hessian.end());
 
     /// Start with very small diagonal regularizer to ensure diagonal is included in sparsity pattern.
-    SparseMatrixF H(A.rows(), A.cols());
+    SparseMatrix H(A.rows(), A.cols());
     H.setIdentity();
     H.diagonal().array() = 1e-10;
     solver.analyzePattern(A + H);
@@ -162,33 +168,34 @@ bool Optimization::linearSolve(const TripletListF &hessian, const VectorXf &b, V
     }
 
     std::cout << "Linear solve failure reasons: " << indefinite_count_reg_cnt << " indefinite, "
-        << invalid_search_dir_cnt << " invalid search dir, " << invalid_residual_cnt << " invalid residual."
-        << std::endl;
+              << invalid_search_dir_cnt << " invalid search dir, " << invalid_residual_cnt << " invalid residual."
+              << std::endl;
 
     return false;
 }
 
-bool Optimization::checkGradient(const VectorXf &y, VectorXf &error,
-                                 const std::function<bool(const VectorXf &, double &)> &func,
-                                 const std::function<bool(const VectorXf &, VectorXf &)> &grad_func, double epsilon,
-                                 int print_level)
+template <class T>
+bool Optimization<T>::checkGradient(const VectorX &y, VectorX &error,
+                                    const std::function<bool(const VectorX &, Float &)> &func,
+                                    const std::function<bool(const VectorX &, VectorX &)> &grad_func, Float epsilon,
+                                    int print_level)
 {
     int num_variables = (int)y.rows();
 
-    VectorXf grad;
+    VectorX grad;
     if (!(grad_func(y, grad)))
     {
         /// Gradient evaluation failed.
-        error = VectorXf::Constant(num_variables, NAN);
+        error = VectorX::Constant(num_variables, NAN);
         if (print_level > 0)
-            std::cout << "Optimization::checkGradient: Gradient evaluation failed at given state!" << std::endl;
+            std::cout << "Optimization<T>::checkGradient: Gradient evaluation failed at given state!" << std::endl;
         return false;
     }
 
-    VectorXf grad_fd(num_variables);
+    VectorX grad_fd(num_variables);
     for (int i = 0; i < num_variables; ++i)
     {
-        VectorXf y_plus = y, y_minus = y, y_plus2 = y, y_minus2 = y;
+        VectorX y_plus = y, y_minus = y, y_plus2 = y, y_minus2 = y;
         y_plus(i) += epsilon;
         y_minus(i) -= epsilon;
         y_plus2(i) += 2.0 * epsilon;
@@ -202,15 +209,15 @@ bool Optimization::checkGradient(const VectorXf &y, VectorXf &error,
                 ((f_plus2 - f_minus2) / (4.0 * epsilon) - grad(i)) / ((f_plus - f_minus) / (2.0 * epsilon) - grad(i));
 
             if ((print_level == 1 && fabs(grad_fd_i - grad(i)) > epsilon) || print_level > 1)
-                std::cout << "Optimization::checkGradient: grad_fd[" << i << "] = " << grad_fd_i << ", grad[" << i
-                << "] = " << grad(i) << ", error ratio = " << error_ratio << std::endl;
+                std::cout << "Optimization<T>::checkGradient: grad_fd[" << i << "] = " << grad_fd_i << ", grad[" << i
+                          << "] = " << grad(i) << ", error ratio = " << error_ratio << std::endl;
 
             grad_fd(i) = grad_fd_i;
         }
         else
         {
             if (print_level > 0)
-                std::cout << "Optimization::checkGradient: Function evaluation failed!" << std::endl;
+                std::cout << "Optimization<T>::checkGradient: Function evaluation failed!" << std::endl;
             grad_fd(i) = NAN;
         }
     }
@@ -219,33 +226,34 @@ bool Optimization::checkGradient(const VectorXf &y, VectorXf &error,
     return error.allFinite() && error.cwiseAbs().maxCoeff() < epsilon;
 }
 
-bool Optimization::checkHessian(const VectorXf &y, MatrixXf &error,
-                                const std::function<bool(const VectorXf &, VectorXf &)> &grad_func,
-                                const std::function<bool(const VectorXf &, MatrixXf &)> &hess_func, double epsilon,
-                                int print_level)
+template <class T>
+bool Optimization<T>::checkHessian(const VectorX &y, MatrixX &error,
+                                   const std::function<bool(const VectorX &, VectorX &)> &grad_func,
+                                   const std::function<bool(const VectorX &, MatrixX &)> &hess_func, Float epsilon,
+                                   int print_level)
 {
     int num_variables = (int)y.rows();
 
-    MatrixXf hess;
+    MatrixX hess;
     if (!(hess_func(y, hess)))
     {
         /// Hessian function failed.
         if (print_level > 0)
-            std::cout << "Optimization::checkHessian: Hessian evaluation failed at given state!" << std::endl;
-        error = MatrixXf::Constant(num_variables, num_variables, NAN);
+            std::cout << "Optimization<T>::checkHessian: Hessian evaluation failed at given state!" << std::endl;
+        error = MatrixX::Constant(num_variables, num_variables, NAN);
         return false;
     }
 
-    MatrixXf hess_fd(num_variables, num_variables);
+    MatrixX hess_fd(num_variables, num_variables);
     for (int i = 0; i < num_variables; ++i)
     {
-        VectorXf y_plus = y, y_minus = y, y_plus2 = y, y_minus2 = y;
+        VectorX y_plus = y, y_minus = y, y_plus2 = y, y_minus2 = y;
         y_plus(i) += epsilon;
         y_minus(i) -= epsilon;
         y_plus2(i) += 2.0 * epsilon;
         y_minus2(i) -= 2.0 * epsilon;
 
-        VectorXf grad_plus, grad_minus, grad_plus2, grad_minus2;
+        VectorX grad_plus, grad_minus, grad_plus2, grad_minus2;
         if (grad_func(y_plus, grad_plus) && grad_func(y_minus, grad_minus) && grad_func(y_plus2, grad_plus2) &&
             grad_func(y_minus2, grad_minus2))
         {
@@ -253,12 +261,12 @@ bool Optimization::checkHessian(const VectorXf &y, MatrixXf &error,
             { /// Upper triangular hessian
                 double hess_fd_i_j = (grad_plus(j) - grad_minus(j)) / (2.0 * epsilon);
                 double error_ratio = ((grad_plus2(j) - grad_minus2(j)) / (4.0 * epsilon) - hess(i, j)) /
-                    ((grad_plus(j) - grad_minus(j)) / (2.0 * epsilon) - hess(i, j));
+                                     ((grad_plus(j) - grad_minus(j)) / (2.0 * epsilon) - hess(i, j));
 
                 if ((print_level == 1 && fabs(hess_fd_i_j - hess(i, j)) > epsilon) || print_level > 1)
-                    std::cout << "Optimization::checkHessian: hess_fd[" << i << ", " << j << "] = " << hess_fd_i_j
-                    << ", hess[" << i << ", " << j << "] = " << hess(i, j)
-                    << ", error ratio = " << error_ratio << std::endl;
+                    std::cout << "Optimization<T>::checkHessian: hess_fd[" << i << ", " << j << "] = " << hess_fd_i_j
+                              << ", hess[" << i << ", " << j << "] = " << hess(i, j)
+                              << ", error ratio = " << error_ratio << std::endl;
 
                 hess_fd(i, j) = hess_fd_i_j;
             }
@@ -266,7 +274,7 @@ bool Optimization::checkHessian(const VectorXf &y, MatrixXf &error,
         else
         {
             if (print_level > 0)
-                std::cout << "Optimization::checkHessian: Gradient evaluation failed!" << std::endl;
+                std::cout << "Optimization<T>::checkHessian: Gradient evaluation failed!" << std::endl;
             hess_fd.row(i).setConstant(NAN);
         }
     }

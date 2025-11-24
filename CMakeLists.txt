@@ -7,9 +7,9 @@ include("cmake/AddCompileOption.cmake")
 
 # add static library. This is the core of the project
 set(DER_TARGET_NAME "discrete_elastic_rods") # Discrete Elastic Rods = DER
-set(DER_LIBARAY_NAME "rods_library")
+set(DER_LIBRARY_NAME "rods_library")
 add_executable(${DER_TARGET_NAME})
-add_library(${DER_LIBARAY_NAME})
+add_library(${DER_LIBRARY_NAME})
 
 # Define test executable
 add_executable("testrunner")
@@ -28,11 +28,11 @@ add_subdirectory("test")
 
 # Force colored output for the ninja generator
 if(CMAKE_GENERATOR STREQUAL "Ninja")
-  enable_supported_compiler_flag(${DER_TARGET_NAME}
+  enable_supported_compiler_flag(${DER_LIBRARY_NAME}
                                  PUBLIC
                                  FLAGS "-fcolor-diagnostics" "-fdiagnostics-color=always"
   )
-  enable_supported_compiler_flag(${DER_TARGET_NAME}
+  enable_supported_compiler_flag(${DER_LIBRARY_NAME}
                                  PUBLIC CHECK_C_FLAGS
                                  FLAGS "-fcolor-diagnostics" "-fdiagnostics-color=always"
   )
