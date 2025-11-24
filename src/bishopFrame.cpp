@@ -1,5 +1,6 @@
 #include <DiscreteElasticRod.hpp>
 
+#include <algorithm>
 #include <stdexcept>
 
 void DiscreteElasticRod::transportBishopFrame()
