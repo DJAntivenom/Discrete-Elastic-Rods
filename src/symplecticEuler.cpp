@@ -2,6 +2,8 @@
 #include <common.h>
 #include <stdexcept>
 
+// #define USE_GRAVITY
+
 using Float = DiscreteElasticRod::Float;
 
 using Vector3 = DiscreteElasticRod::Vector3;
@@ -94,7 +96,9 @@ void DiscreteElasticRod::doSymplecticEuler(double delta_time)
             }
 
             // Gravity, pulling down
+#ifdef USE_GRAVITY
             f(1, i) = m_vertex_mass[i] * -9.81f;
+#endif
 
             // TODO: Looks like there's an off by one error, node i==8 has force instead of i==9
             print_debug("Force on node " + std::to_string(i) + ":");
