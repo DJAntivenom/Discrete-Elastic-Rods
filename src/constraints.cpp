@@ -4,7 +4,7 @@
 
 #include <stdexcept>
 
-#if true
+#if false
     #define FIRST_METHOD
 #else
     #define SECOND_METHOD
@@ -30,12 +30,24 @@ bool DiscreteElasticRod::getConstraints(const Opt::VectorX &x_lambda, Opt::Float
         //For second constraint formulation
         // $E_s = 1/2 (|x_{i+1} - x_i|^2 - |\bar{e_i}|^2)$
         Float squared_edge_length = (x_lambda.segment<3>(3 * (i + 1)) - x_lambda.segment<3>(3 * i)).squaredNorm();
-        C(i) = 0.5 * squared_edge_length - std::pow(m_edge_length(i), 2);
+        C(i) = 0.5 * (squared_edge_length - std::pow(m_edge_length(i), 2));
+        if (C(i) > 100) {
+            print_debug("vertex " + std::to_string(i+1) + ": ");
+            std::cout << x_lambda.segment<3>(3 * (i + 1)) << std::endl;
+            print_debug("vertex " + std::to_string(i) + ": ");
+            std::cout << x_lambda.segment<3>(3 * i) << std::endl;
+            print_debug("because squared_edge_length is " + std::to_string(squared_edge_length) + " and m_edge_length is " + std::to_string(m_edge_length(i)));
+            print_debug("energy at vertex " + std::to_string(i) + " is too high" );
+        }
 #endif
 
     }
 
     energy = C.sum();
+
+    if (energy > 100) {
+        print_debug("energy too high wtf");
+    }
     print_debug("the constraint energy is " + std::to_string(energy));
     return true;
 }
@@ -43,7 +55,7 @@ bool DiscreteElasticRod::getConstraints(const Opt::VectorX &x_lambda, Opt::Float
 bool DiscreteElasticRod::getConstraintGradient(const Opt::VectorX &x_lambda, Opt::VectorX &gradient) const {
     print_debug("");
 
-    auto maple_gradient = [](const Vector3 &x_min_1, const Vector3 &x_i, const Vector3 &x_plus_1, const Vector2 &e_bar)
+    auto maple_gradient = [](const Vector3 &x_min_1, const Vector3 &x_i, const Vector3 &x_plus_1, const Vector2 &e_bar, const Vector3 &x_old)
     {
         Vector3 dC_Stretch;
         dC_Stretch.setZero();
@@ -76,7 +88,6 @@ bool DiscreteElasticRod::getConstraintGradient(const Opt::VectorX &x_lambda, Opt
         dC_Stretch[2] = t1 * x_i[2] - x_min_1[2] - x_plus_1[2];
 #endif
 
-
         return dC_Stretch;
     };
 
@@ -101,9 +112,9 @@ bool DiscreteElasticRod::getConstraintGradient(const Opt::VectorX &x_lambda, Opt
 
 #ifdef SECOND_METHOD
         //For second constraint formulation
-         dC_Stretch_plus[0] = -x_plus_1[0] + x_i[0];
-         dC_Stretch_plus[1] = -x_plus_1[1] + x_i[1];
-         dC_Stretch_plus[2] = -x_plus_1[2] + x_i[2];
+        dC_Stretch_plus[0] = -x_plus_1[0] + x_i[0];
+        dC_Stretch_plus[1] = -x_plus_1[1] + x_i[1];
+        dC_Stretch_plus[2] = -x_plus_1[2] + x_i[2];
 #endif
 
         return dC_Stretch_plus;
@@ -133,7 +144,6 @@ bool DiscreteElasticRod::getConstraintGradient(const Opt::VectorX &x_lambda, Opt
         dC_Stretch_min[1] = x_i[1] - x_min_1[1];
         dC_Stretch_min[2] = x_i[2] - x_min_1[2];
 #endif
-
 
         return dC_Stretch_min;
     };
@@ -343,7 +353,7 @@ bool DiscreteElasticRod::getConstraintHessian(const Opt::VectorX &x_lambda, Opt:
 
         //For second constraint formulation
 #ifdef SECOND_METHOD
-        // Matrix3::Identity();
+        Matrix3::Identity();
 #endif SECOND_METHOD
 
     Matrix3 maple_hessian_last =
@@ -357,7 +367,7 @@ bool DiscreteElasticRod::getConstraintHessian(const Opt::VectorX &x_lambda, Opt:
 
         //For second constraint formulation
 #ifdef SECOND_METHOD
-        // Matrix3::Identity();
+        Matrix3::Identity();
 #endif
 
     // For endpoint constraints
