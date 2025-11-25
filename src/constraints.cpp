@@ -55,7 +55,7 @@ bool DiscreteElasticRod::getConstraints(const Opt::VectorX &x_lambda, Opt::Float
 bool DiscreteElasticRod::getConstraintGradient(const Opt::VectorX &x_lambda, Opt::VectorX &gradient) const {
     print_debug("");
 
-    auto maple_gradient = [](const Vector3 &x_min_1, const Vector3 &x_i, const Vector3 &x_plus_1, const Vector2 &e_bar, const Vector3 &x_old)
+    auto maple_gradient = [](const Vector3 &x_min_1, const Vector3 &x_i, const Vector3 &x_plus_1, const Vector2 &e_bar)
     {
         Vector3 dC_Stretch;
         dC_Stretch.setZero();
