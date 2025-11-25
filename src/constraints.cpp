@@ -417,9 +417,12 @@ void DiscreteElasticRod::applyConstraints(size_t max_newton_iterations) {
 
     print_debug("Initial positions:");
     print_debug(m_vertex_positions);
-    print_debug("Initial edge lengths:");
-    print_debug(getEdges().colwise().norm());
+    print_debug("Initial edge length:");
+    print_debug(VectorX(getEdges().colwise().norm()).transpose());
+    print_debug("Initial edge length difference:");
+    print_debug((VectorX(getEdges().colwise().norm()) - m_edge_length).transpose());
 
+    bool exit = false;
     for (size_t step = 0; step < max_newton_iterations; ++step) {
         VectorX x_lambda = VectorX::Zero(3 * (m_n + 2));
         x_lambda.head(3 * (m_n + 2)) = m_vertex_positions.reshaped(3 * (m_n + 2), 1);
@@ -432,22 +435,24 @@ void DiscreteElasticRod::applyConstraints(size_t max_newton_iterations) {
                 break;
             case Opt::OptimizationStatus::FAILURE:
                 std::cout << "constraint calculation fail" << std::endl;
-                return;
+                exit = true;
+                break;
             case Opt::OptimizationStatus::CONVERGED:
+                exit = true;
+                break;
+        }
 
-                print_debug("Resulting positions:");
-                print_debug(m_vertex_positions);
-                print_debug("Result edge lengths:");
-                print_debug(getEdges().colwise().norm());
-
-                print_debug("[applyConstraints] converged exit");
-                return;
+        if (exit)
+        {
+            break;
         }
     }
 
     print_debug("Resulting positions:");
     print_debug(m_vertex_positions);
-    print_debug("Result edge lengths:");
-    print_debug(getEdges().colwise().norm());
-    print_debug("[applyConstraints] exit");
+    print_debug("Result edge length:");
+    print_debug(VectorX(getEdges().colwise().norm()).transpose());
+    print_debug("Result edge length difference:");
+    print_debug((VectorX(getEdges().colwise().norm()) - m_edge_length).transpose());
+    print_debug("exit");
 }
