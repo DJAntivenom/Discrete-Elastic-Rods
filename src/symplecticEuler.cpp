@@ -2,13 +2,6 @@
 #include <common.h>
 #include <stdexcept>
 
-using Float = DiscreteElasticRod::Float;
-
-using Vector3 = DiscreteElasticRod::Vector3;
-
-using Matrix3 = DiscreteElasticRod::Matrix3;
-using Matrix3X = DiscreteElasticRod::Matrix3X;
-
 /**
  * Curvature binormal derivative by other node, $\nabla_i(kb)_i$, from paper chapter 7.1.
  * @return $[\nabla_{i-1}(kb)_i, \nabla_i(kb)_i, \nabla_{i+1}(kb)_i]$

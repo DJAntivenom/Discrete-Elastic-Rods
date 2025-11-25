@@ -246,7 +246,7 @@ static void applyHandleUpdate(uint64_t handle_index, const Eigen::Vector3f &new_
         // Set position, but preserve length
         rods[rod_index].setVertexPosition(0,
                                           (neighbour_position + (new_position - neighbour_position).normalized() * prev_length)
-                                          .cast<typename DiscreteElasticRod::Float>());
+                                          .cast<Float>());
         updateRodHandles(rod_index);
         break;
     case 3:
@@ -255,7 +255,7 @@ static void applyHandleUpdate(uint64_t handle_index, const Eigen::Vector3f &new_
         // Set position, but preserve length
         rods[rod_index].setVertexPosition(vertex_positions.cols() - 1,
                                           (neighbour_position + (new_position - neighbour_position).normalized() * prev_length)
-                                          .cast<typename DiscreteElasticRod::Float>());
+                                          .cast<Float>());
         updateRodHandles(rod_index);
         break;
     default:

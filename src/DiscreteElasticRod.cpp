@@ -274,7 +274,7 @@ polyscope::SurfaceMesh *DiscreteElasticRod::registerSurfaceMesh(const std::strin
     return mesh;
 }
 
-DiscreteElasticRod::Matrix4X DiscreteElasticRod::getMaterialCurvature(const VectorX &theta) const
+Matrix4X DiscreteElasticRod::getMaterialCurvature(const VectorX &theta) const
 {
     Matrix4X curvature(4, m_n + 2);
     const auto binormals = getBinormals();

@@ -31,7 +31,7 @@ void DiscreteElasticRod::transportBishopFrame()
     }
 }
 
-DiscreteElasticRod::Matrix3 DiscreteElasticRod::getInterpolatedBishopFrame(double alpha)
+Matrix3 DiscreteElasticRod::getInterpolatedBishopFrame(double alpha)
 {
     const float interpolated_length = m_total_rod_length * alpha;
 
