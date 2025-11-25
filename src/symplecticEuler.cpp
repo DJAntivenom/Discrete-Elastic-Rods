@@ -93,6 +93,9 @@ void DiscreteElasticRod::doSymplecticEuler(double delta_time)
                 f.col(j) += force_angle; // TODO: Is j or i correct?
             }
 
+            // Gravity, pulling down
+            f(1, i) = m_vertex_mass[i] * -9.81f;
+
             // TODO: Looks like there's an off by one error, node i==8 has force instead of i==9
             print_debug("Force on node " + std::to_string(i) + ":");
             print_debug(f.col(i));
