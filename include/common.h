@@ -2,7 +2,7 @@
 #define DISCRETE_ELASTIC_RODS_COMMON_H
 
 #ifndef PRINT_DEBUG
- #define PRINT_DEBUG
+// #define PRINT_DEBUG
 #endif
 
 #ifdef PRINT_DEBUG
