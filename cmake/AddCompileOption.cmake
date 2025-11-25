@@ -48,7 +48,7 @@ function(enable_supported_compiler_flag target)
         string(FIND "${old_flags}" "${flag}" flag_already_set)
 
         if (NOT (flag_already_set EQUAL -1))
-            message(STATUS "Flag \"${flag}\" already set for target \"${target}")
+            message(STATUS "Flag \"${flag}\" already set for target \"${target}\"")
             continue()
         endif()
 

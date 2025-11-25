@@ -11,9 +11,6 @@ set(DER_LIBRARY_NAME "rods_library")
 add_executable(${DER_TARGET_NAME})
 add_library(${DER_LIBRARY_NAME})
 
-# Define test executable
-add_executable("testrunner")
-
 # set compile features
 target_compile_features(${DER_TARGET_NAME} PUBLIC c_std_23)
 target_compile_features(${DER_TARGET_NAME} PUBLIC cxx_std_17)
