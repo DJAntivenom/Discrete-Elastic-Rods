@@ -96,6 +96,16 @@ void DiscreteElasticRod::randomizeVertexPositions()
 {
     m_vertex_positions.block(1, 0, 2, m_n + 2).setRandom() *= 0.1f;
 
+    m_edge_length = getEdges().colwise().norm();
+
+    m_l_i[0] = m_edge_length[0];
+    m_l_i.segment(1, m_n) = m_edge_length.head(m_n) + m_edge_length.tail(m_n);
+    m_l_i[m_n + 1] = m_edge_length[m_n];
+
+    m_total_rod_length = m_edge_length.sum();
+
+    m_vertex_velocities.setZero(); //starting at rest
+
     m_is_straight_isotropic = false;
     transportBishopFrame();
 }

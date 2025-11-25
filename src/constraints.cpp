@@ -33,9 +33,9 @@ bool DiscreteElasticRod::getConstraints(const Opt::VectorX &x_lambda, Opt::Float
         C(i) = 0.5 * (squared_edge_length - std::pow(m_edge_length(i), 2));
         if (C(i) > 100) {
             print_debug("vertex " + std::to_string(i+1) + ": ");
-            std::cout << x_lambda.segment<3>(3 * (i + 1)) << std::endl;
+            print_debug(x_lambda.segment<3>(3 * (i + 1)));
             print_debug("vertex " + std::to_string(i) + ": ");
-            std::cout << x_lambda.segment<3>(3 * i) << std::endl;
+            print_debug(x_lambda.segment<3>(3 * i));
             print_debug("because squared_edge_length is " + std::to_string(squared_edge_length) + " and m_edge_length is " + std::to_string(m_edge_length(i)));
             print_debug("energy at vertex " + std::to_string(i) + " is too high" );
         }
