@@ -86,11 +86,11 @@ void DiscreteElasticRod::doSymplecticEuler(double delta_time)
 
                 // Position contribution
                 Vector3 force_position = -2 * m_alpha / m_l_i[j] * nabla_kb[j_nabla].transpose() * binormals_padded.col(j);
-                f.col(i) += force_position;
+                f.col(j) += force_position; // TODO: Is j or i correct?
 
                 // Angle contribution
                 Vector3 force_angle = m_beta * start_to_end_theta / actual_rod_length * nabla_psi[j_nabla];
-                f.col(i) += force_angle;
+                f.col(j) += force_angle; // TODO: Is j or i correct?
             }
 
             // TODO: Looks like there's an off by one error, node i==8 has force instead of i==9
