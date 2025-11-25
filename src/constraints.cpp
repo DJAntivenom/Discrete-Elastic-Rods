@@ -419,8 +419,8 @@ void DiscreteElasticRod::applyConstraints(size_t max_newton_iterations) {
     print_debug(m_vertex_positions);
     print_debug("Initial edge length:");
     print_debug(VectorX(getEdges().colwise().norm()).transpose());
-    print_debug("Initial edge length difference:");
-    print_debug((VectorX(getEdges().colwise().norm()) - m_edge_length).transpose());
+    print_debug("Initial edge length / resting edge length:");
+    print_debug((VectorX(getEdges().colwise().norm()).cwiseQuotient(m_edge_length)).transpose());
 
     bool exit = false;
     for (size_t step = 0; step < max_newton_iterations; ++step) {
@@ -452,7 +452,7 @@ void DiscreteElasticRod::applyConstraints(size_t max_newton_iterations) {
     print_debug(m_vertex_positions);
     print_debug("Result edge length:");
     print_debug(VectorX(getEdges().colwise().norm()).transpose());
-    print_debug("Result edge length difference:");
-    print_debug((VectorX(getEdges().colwise().norm()) - m_edge_length).transpose());
+    print_debug("Result edge length / resting edge length:");
+    print_debug((VectorX(getEdges().colwise().norm()).cwiseQuotient(m_edge_length)).transpose());
     print_debug("exit");
 }
