@@ -93,7 +93,7 @@ private:
     /**
      * @brief Set when positions of vertices are randomized or moved.
      */
-    const bool m_is_straight_isotropic;
+    bool m_is_straight_isotropic;
 
     /**
      * \brief Material parameters.

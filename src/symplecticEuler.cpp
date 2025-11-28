@@ -2,6 +2,8 @@
 #include <common.h>
 #include <stdexcept>
 
+// #define USE_GRAVITY
+
 /**
  * Curvature binormal derivative by other node, $\nabla_i(kb)_i$, from paper chapter 7.1.
  * @return $[\nabla_{i-1}(kb)_i, \nabla_i(kb)_i, \nabla_{i+1}(kb)_i]$
@@ -79,12 +81,17 @@ void DiscreteElasticRod::doSymplecticEuler(double delta_time)
 
                 // Position contribution
                 Vector3 force_position = -2 * m_alpha / m_l_i[j] * nabla_kb[j_nabla].transpose() * binormals_padded.col(j);
-                f.col(i) += force_position;
+                f.col(j) += force_position; // TODO: Is j or i correct?
 
                 // Angle contribution
                 Vector3 force_angle = m_beta * start_to_end_theta / actual_rod_length * nabla_psi[j_nabla];
-                f.col(i) += force_angle;
+                f.col(j) += force_angle; // TODO: Is j or i correct?
             }
+
+            // Gravity, pulling down
+#ifdef USE_GRAVITY
+            f(1, i) = m_vertex_mass[i] * -9.81f;
+#endif
 
             // TODO: Looks like there's an off by one error, node i==8 has force instead of i==9
             print_debug("Force on node " + std::to_string(i) + ":");
