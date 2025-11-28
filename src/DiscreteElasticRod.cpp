@@ -4,34 +4,29 @@
 
 #include "common.h"
 
-DiscreteElasticRod::DiscreteElasticRod(uint64_t n,
-                                       Float alpha, Float beta,
-                                       float radius, float theta_zero, float theta_n) :
-    m_vertex_positions(3, (n + 2)),
-    m_vertex_velocities(3, (n + 2)),
-    m_bishop_frame_vector{0., 0., 1.},
-    m_bishop_frame(3, n + 1),
-    m_edge_theta(n + 1),
-    m_edge_length(n + 1),
-    m_vertex_mass(n + 2),
-    m_l_i(n + 2),
-    m_n(n),
-    m_radius(radius),
-    m_is_straight_isotropic(true),
+DiscreteElasticRod::DiscreteElasticRod(const InitialConfiguration &ic,
+                                       Float alpha, Float beta) :
+    m_vertex_positions(ic.getInitialPositions()),
+    m_vertex_velocities(3, ic.getN() + 2),
+    m_bishop_frame_vector{ 0., 0., 1. },
+    m_bishop_frame(3, ic.getN() + 1),
+    m_edge_theta(ic.getN() + 1),
+    m_edge_length(ic.getN() + 1),
+    m_vertex_mass(ic.getN() + 2),
+    m_l_i(ic.getN() + 2),
+    m_n(ic.getN()),
+    m_radius(ic.getRadius()),
+    m_is_straight_isotropic(ic.isStraight() && ic.isIsotropic()),
     m_alpha(alpha),
     m_beta(beta)
 {
-    Vector3 start{ -0.5f, 0.f, 0.f };
-    Vector3 increment{ 0.1f, 0.0f, 0.0f };
-    for (uint64_t i = 0; i < n + 2; ++i)
+    for (uint64_t i = 1; i < m_n + 2; ++i)
     {
-        m_vertex_positions.col(i) = start + i * increment;
-        if (i > 0)
-            m_edge_length[i - 1] = 0.1;
+        m_edge_length[i - 1] = (m_vertex_positions.col(i) - m_vertex_positions.col(i - 1)).norm();
     }
-    m_l_i[0] = m_edge_length[0] * 2;
+    m_l_i[0] = m_edge_length[0];
     m_l_i.segment(1, m_n) = m_edge_length.head(m_n) + m_edge_length.tail(m_n);
-    m_l_i[m_n + 1] = m_edge_length[m_n] * 2;
+    m_l_i[m_n + 1] = m_edge_length[m_n];
 
     m_vertex_mass.setConstant(1.0f);
 
@@ -39,20 +34,14 @@ DiscreteElasticRod::DiscreteElasticRod(uint64_t n,
 
     m_vertex_velocities.setZero(); //starting at rest
 
-    /**
-     * TODO: once we don't just use naturally straigth rods anymore, this has to be done
-     * differently.
-     */
-    m_bishop_frame.colwise() = m_bishop_frame_vector;
-
     m_edge_theta.setZero();
-    m_edge_theta(0) = theta_zero;
-    m_edge_theta(n) = theta_n;
 
     /** TODO: allow anisotropic rods, by minimizing E_bend wrt. B */
     m_B_matrix = Vector2::Constant(alpha).asDiagonal();
 
-    m_w_overbar = getMaterialCurvature(m_edge_theta);
+    m_w_overbar = ic.getRestOmega();
+
+    transportBishopFrame();
 }
 
 void DiscreteElasticRod::update(double delta_time, size_t max_newton_iterations)
@@ -88,7 +77,6 @@ void DiscreteElasticRod::setVertexPosition(uint64_t vertex_index, const Vector3 
 {
     m_vertex_positions.col(vertex_index) = new_position;
 
-    m_is_straight_isotropic = false;
     transportBishopFrame();
 }
 
@@ -96,7 +84,6 @@ void DiscreteElasticRod::randomizeVertexPositions()
 {
     m_vertex_positions.block(1, 0, 2, m_n + 2).setRandom() *= 0.1f;
 
-    m_is_straight_isotropic = false;
     transportBishopFrame();
 }
 

@@ -8,6 +8,7 @@
 
 #include "common.h"
 #include "Optimization.h"
+#include "InitialConfiguration.hpp"
 
 #include <string>
 
@@ -82,22 +83,22 @@ private:
     /**
      * \brief Corresponds to n from the paper, i.e. count of all internal vertices.
      */
-    uint64_t m_n;
+    const uint64_t m_n;
 
     /**
      * \brief Radius of the rod.
      */
-    float m_radius;
+    const float m_radius;
 
     /**
      * @brief Set when positions of vertices are randomized or moved.
      */
-    bool m_is_straight_isotropic;
+    const bool m_is_straight_isotropic;
 
     /**
      * \brief Material parameters.
      */
-    Float m_alpha, m_beta;
+    const Float m_alpha, m_beta;
 
     /**
      * \brief \overbar{B}^j from the paper.
@@ -115,9 +116,9 @@ public:
      * @param n The number of inner vertices. There will be 2 more vertices,
      *  corresponding to the constrained boundary vertices.
      */
-    DiscreteElasticRod(uint64_t n,
-                       Float alpha, Float beta,
-                       float radius = 0.05f, float theta_zero = 0.f, float theta_n = 0.f);
+    DiscreteElasticRod(const InitialConfiguration &initial_configuration,
+                       Float alpha, Float beta);
+
     virtual ~DiscreteElasticRod() = default;
 
     /**

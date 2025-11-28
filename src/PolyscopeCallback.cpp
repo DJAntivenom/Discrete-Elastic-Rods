@@ -123,11 +123,6 @@ static bool draw_handles = true;
 static float centerline_radius = 0.02;
 
 /**
- * @brief Number of vertices to add.
- */
-static int n_to_add = 9;
-
-/**
  * @brief Maximal number of iterations newton method can run for in one timestep.
  */
 static int max_newton_iterations = 5;
@@ -194,10 +189,10 @@ static void updateRodHandles(int rod_index)
  *
  * TODO: Where to put these helper functions?
  */
-static void initializeRod(int n_vertices, float alpha, float beta)
+static void initializeRod(const InitialConfiguration &config, float alpha, float beta)
 {
     // Add rod
-    rods.emplace_back(n_vertices, alpha, beta);
+    rods.emplace_back(config, alpha, beta);
 
     // Initialize rotation frame
     rod_thetas.resize(2, rod_thetas.cols() + 1);
@@ -279,18 +274,9 @@ static void makeConfigWindow()
         ImGui::InputFloat("Time-step", &delta_time, 0.001);
         ImGui::InputFloat("Simulation freeze time", &simulation_freeze_time_s, 0.1);
         ImGui::InputInt("Max number of newton iterations", &max_newton_iterations);
+        ImGui::Checkbox("Run simulation", &is_simulation_running);
 
-        if (rods.size() == 0)
-        {
-            ImGui::InputInt("Vertices n", &n_to_add);
-            ImGui::InputFloat("Alpha", &alpha);
-            ImGui::InputFloat("Beta", &beta);
-            if (ImGui::Button("Create Rod"))
-            {
-                initializeRod(n_to_add, alpha, beta);
-            }
-        }
-        else
+        if (rods.size() > 0)
         {
             uint64_t rods_size = rods.size();
             for (uint64_t rod_index = 0; rod_index < rods_size; rod_index++)
@@ -304,8 +290,48 @@ static void makeConfigWindow()
                 }
             }
         }
+    }
 
-        ImGui::Checkbox("Run simulation", &is_simulation_running);
+    if (ImGui::CollapsingHeader("Creation settings", ImGuiTreeNodeFlags_DefaultOpen))
+    {
+        if (rods.size() == 0)
+        {
+            static int selected_item = 0;
+            ImGui::Combo("Preset Type", &selected_item, InitialConfiguration::CONFIG_NAMES, InitialConfiguration::CONFIG_COUNT);
+
+            static int n = 9;
+            static float radius = 0.05f;
+            static float initial_distance = 0.9;
+
+            ImGui::InputInt("Vertices n", &n);
+            ImGui::InputFloat("Alpha", &alpha);
+            ImGui::InputFloat("Beta", &beta);
+            ImGui::InputFloat("Radius", &radius);
+
+            switch (selected_item)
+            {
+            case InitialConfiguration::STRAIGHT_ISOTROPIC_PRESSURE:
+                ImGui::InputFloat("Initial Boundary Distance", &initial_distance);
+                initial_distance = std::clamp(initial_distance, 0.f, 1.f);
+                break;
+            default:
+                break;
+            }
+
+            if (ImGui::Button("Create Rod"))
+            {
+                std::unique_ptr<InitialConfiguration> configuration = getInitialConfiguration(static_cast<InitialConfiguration::ConfigType>(selected_item),
+                                                                                              n, radius, initial_distance);
+                initializeRod(*configuration, alpha, beta);
+            }
+        }
+        else
+        {
+            if (ImGui::Button("Delete rod"))
+            {
+                rods.clear();
+            }
+        }
     }
 
     if (ImGui::CollapsingHeader("Visualization settings", ImGuiTreeNodeFlags_DefaultOpen))
