@@ -10,7 +10,7 @@
     #define SECOND_METHOD
 #endif
 
-#if false
+#if true
     #define ENDPOINTS
 #endif
 
@@ -29,6 +29,7 @@ bool DiscreteElasticRod::getConstraints(const Opt::VectorX &x_lambda, Opt::Float
 #ifdef SECOND_METHOD
         //For second constraint formulation
         // $E_s = 1/2 (|x_{i+1} - x_i|^2 - |\bar{e_i}|^2)$
+        //Float dist = 0.5 * (x_lambda.segment<3>(3 * i) - m_vertex_positions.col(i)).squaredNorm();
         Float squared_edge_length = (x_lambda.segment<3>(3 * (i + 1)) - x_lambda.segment<3>(3 * i)).squaredNorm();
         C(i) = 0.5 * (squared_edge_length - std::pow(m_edge_length(i), 2));
         if (C(i) > 100) {

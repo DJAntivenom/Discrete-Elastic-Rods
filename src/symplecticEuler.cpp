@@ -21,7 +21,8 @@ static std::vector<Matrix3> nabla_curvature_binormal(
     const Matrix3X &binormals_padded)
 {
     const Vector3 e_i = edges.col(i);
-    const Vector3 e_i_min_1 = edges.col(i);
+    const Vector3 e_i_min_1 = edges.col(i-1);
+    //const Vector3 e_i_plus_1 = edges.col(i+1);
     const Vector3 kb_i = binormals_padded.col(i);
 
     Float denominator = e_i_min_1.norm() * e_i.norm() + e_i_min_1.dot(e_i);
@@ -34,10 +35,15 @@ static std::vector<Matrix3> nabla_curvature_binormal(
     skew_e_i_min_1 << 0, -e_i_min_1[2], e_i_min_1[1],
         e_i_min_1[2], 0, -e_i_min_1[0],
         -e_i_min_1[1], e_i_min_1[0], 0;
+    Matrix3 skew_e_i_plus_1;
+    // skew_e_i_plus_1 << 0, -e_i_plus_1[2], e_i_plus_1[1],
+    //     e_i_plus_1[2], 0, -e_i_plus_1[0],
+    //     -e_i_plus_1[1], e_i_plus_1[0], 0;
 
     Matrix3 nabla_min_1 = 2 * skew_e_i + kb_i * e_i.transpose() / denominator;
     // TODO: Fix this computation if paper has typo?
-    Matrix3 nabla_plus_1 = 2 * skew_e_i_min_1 + kb_i * e_i_min_1.transpose() / denominator;
+    Matrix3 nabla_plus_1 = 2 * skew_e_i_min_1 - kb_i * e_i_min_1.transpose() / denominator;
+    //Matrix3 nabla_plus_1 = 2 * skew_e_i_plus_1 + kb_i * e_i_min_1.transpose() / denominator;
     Matrix3 nabla = -(nabla_min_1 + nabla_plus_1);
 
     return { nabla_min_1, nabla, nabla_plus_1 };
@@ -65,34 +71,75 @@ void DiscreteElasticRod::doSymplecticEuler(double delta_time)
     binormals_padded.setZero();
     binormals_padded.block(0, 1, 3, m_n) = binormals;
 
+    std::vector<Matrix3> nabla_kbs;
+    std::vector<Vector3> nabla_psis;
+
+    nabla_kbs.emplace_back(Matrix3::Zero());
+    nabla_kbs.emplace_back(Matrix3::Zero());
+    nabla_kbs.emplace_back(Matrix3::Zero());
+
+    nabla_psis.emplace_back(Vector3::Zero());
+
+
+    for (int i = 1; i <= m_n; i++) {
+        auto x = nabla_curvature_binormal(i, edges, binormals_padded);
+        nabla_kbs.emplace_back(x[0]);
+        nabla_kbs.emplace_back(x[1]);
+        nabla_kbs.emplace_back(x[2]);
+
+        Vector3 nabla_psi_i_min_1 = binormals_padded.col(i) / (2 * m_edge_length(i - 1));
+        Vector3 nabla_psi_i_plus_1 = binormals_padded.col(i) / (2 * m_edge_length(i));
+        Vector3 nabla_psi_i = -(nabla_psi_i_min_1 + nabla_psi_i_plus_1);
+
+        nabla_psis.emplace_back(nabla_psi_i_min_1);
+        nabla_psis.emplace_back(nabla_psi_i);
+        nabla_psis.emplace_back(nabla_psi_i_plus_1);
+    }
+    nabla_kbs.emplace_back(Matrix3::Zero());
+    nabla_kbs.emplace_back(Matrix3::Zero());
+    nabla_kbs.emplace_back(Matrix3::Zero());
+
+
+
     // TODO: Implement case m_is_straight_isotropic = false
 
     // --- Calculate Forces
     if (m_is_straight_isotropic || true) // TODO: Undo debug if
     {
-        for (uint64_t i = 1; i <= m_n; i++)
+        for (uint64_t i = 0; i <= m_n+1; i++)
         {
-            auto nabla_kb = nabla_curvature_binormal(i, edges, binormals_padded);
-
-            // Equation (9) of paper
-            Vector3 nabla_psi_i_min_1 = binormals_padded.col(i) / (2 * actual_edge_lengths[i - 1]);
-            Vector3 nabla_psi_i_plus_1 = binormals_padded.col(i) / (2 * actual_edge_lengths[i]);
-            Vector3 nabla_psi_i = -(nabla_psi_i_min_1 + nabla_psi_i_plus_1);
-            std::vector<Vector3> nabla_psi = { nabla_psi_i_min_1, nabla_psi_i, nabla_psi_i_plus_1 };
+            // auto nabla_kb = nabla_curvature_binormal(i, edges, binormals_padded);
+            //
+            // // Equation (9) of paper
+            // Vector3 nabla_psi_i_min_1 = binormals_padded.col(i) / (2 * m_edge_length(i - 1));
+            // Vector3 nabla_psi_i_plus_1 = binormals_padded.col(i) / (2 * m_edge_length(i));
+            // Vector3 nabla_psi_i = -(nabla_psi_i_min_1 + nabla_psi_i_plus_1);
+            // std::vector<Vector3> nabla_psi = { nabla_psi_i_min_1, nabla_psi_i, nabla_psi_i_plus_1 };
 
             // For each node, consider its neighboring vertices
             for (uint64_t j = i - 1; j <= i + 1; j++)
             {
-                // j to index into nabla vectors with
-                const uint64_t j_nabla = j - i + 1;
+                if ((i > 0 && i <= m_n) || (i == 0 && j == 1) || (i == m_n + 1 && j == m_n)) {
+                    // j to index into nabla vectors with
 
-                // Position contribution
-                Vector3 force_position = -2 * m_alpha / m_l_i[j] * nabla_kb[j_nabla].transpose() * binormals_padded.col(j);
-                f.col(j) += force_position; // TODO: Is j or i correct?
+                    const uint64_t j_nabla = j - i + 1;
 
-                // Angle contribution
-                Vector3 force_angle = m_beta * start_to_end_theta / actual_rod_length * nabla_psi[j_nabla];
-                f.col(j) += force_angle; // TODO: Is j or i correct?
+                    uint64_t nabla_index = 3 * (i-1) + 2 * j_nabla;
+
+                    if (i == 0 && j == 1) {
+                        nabla_index = 0;
+                    } else if (i == m_n + 1 && j == m_n) {
+                        nabla_index = nabla_kbs.size() - 1;
+                    }
+
+                    // Position contribution
+                    Vector3 force_position = -2 * m_alpha / m_l_i[j] * nabla_kbs[nabla_index].transpose() * binormals_padded.col(j);
+                    f.col(j) += force_position; // TODO: Is j or i correct?
+
+                    // Angle contribution
+                    Vector3 force_angle = m_beta * start_to_end_theta / m_total_rod_length * nabla_psis[nabla_index];
+                    f.col(j) += force_angle; // TODO: Is j or i correct?
+                }
             }
 
             // Gravity, pulling down

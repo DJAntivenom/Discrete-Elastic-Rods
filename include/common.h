@@ -15,3 +15,8 @@
 #endif
 
 #endif // DISCRETE_ELASTIC_RODS_COMMON_H
+
+#ifndef KEEP_TURNING
+    #define KEEP_TURNING
+#endif
+
