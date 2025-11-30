@@ -3,11 +3,11 @@
 class IsotropicStraightRest : public InitialConfiguration
 {
 public:
-    IsotropicStraightRest(uint64_t n, float radius) :
+    IsotropicStraightRest(uint64_t n, float radius, Float length) :
         InitialConfiguration(n, radius)
     {
-        const Float length = 1.0f;
-        const Vector3 start{ -0.5f, 0, 0 };
+        //const Float length = 1.0f;
+        const Vector3 start{ -0.5f * length, 0, 0 };
         const Vector3 increment{ length / (n + 2), 0, 0 };
 
         for (uint32_t i = 0; i < n + 2; ++i)
@@ -43,12 +43,12 @@ std::unique_ptr<InitialConfiguration> getInitialConfiguration(InitialConfigurati
                                                               float radius,
                                                               Float length)
 {
-    assert(length > 0 && length <= 1);
+    assert(length > 0 && length <= (n + 1) / 10);
 
     switch (type)
     {
     case InitialConfiguration::STRAIGHT_ISOTROPIC_AT_REST:
-        return std::make_unique<IsotropicStraightRest>(n, radius);
+        return std::make_unique<IsotropicStraightRest>(n, radius, length);
     case InitialConfiguration::STRAIGHT_ISOTROPIC_PRESSURE:
         return std::make_unique<IsotropicStraightUnderPressure>(n, radius, length);
     case InitialConfiguration::UNKNOWN:

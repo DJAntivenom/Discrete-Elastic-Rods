@@ -70,7 +70,7 @@ void DiscreteElasticRod::doSymplecticEuler(double delta_time)
 
             // Equation (9) of paper
             Vector3 nabla_psi_i_min_1 = binormals_padded.col(i) / (2 * m_edge_length[i - 1]);
-            Vector3 nabla_psi_i_plus_1 = binormals_padded.col(i) / (2 * m_edge_length[i]);
+            Vector3 nabla_psi_i_plus_1 = -binormals_padded.col(i) / (2 * m_edge_length[i]);
             Vector3 nabla_psi_i = -(nabla_psi_i_min_1 + nabla_psi_i_plus_1);
             std::vector<Vector3> nabla_psi = { nabla_psi_i_min_1, nabla_psi_i, nabla_psi_i_plus_1 };
 
@@ -81,11 +81,11 @@ void DiscreteElasticRod::doSymplecticEuler(double delta_time)
                 const uint64_t j_nabla = j - i + 1;
 
                 // Position contribution
-                Vector3 force_position = -2 * m_alpha / m_l_i[j] * nabla_kb[j_nabla].transpose() * binormals_padded.col(j);
+                Vector3 force_position = -2 * m_alpha / m_l_i[i] * nabla_kb[j_nabla].transpose() * binormals_padded.col(i);
                 f.col(j) += force_position; // TODO: Is j or i correct?
 
                 // Angle contribution
-                Vector3 force_angle = m_beta * start_to_end_theta / m_total_rod_length * nabla_psi[j_nabla];
+                Vector3 force_angle = +m_beta * start_to_end_theta / m_total_rod_length * nabla_psi[j_nabla];
                 f.col(j) += force_angle; // TODO: Is j or i correct?
             }
 

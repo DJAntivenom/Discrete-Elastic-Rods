@@ -310,9 +310,10 @@ static void makeConfigWindow()
 
             switch (selected_item)
             {
+            case InitialConfiguration::STRAIGHT_ISOTROPIC_AT_REST:
             case InitialConfiguration::STRAIGHT_ISOTROPIC_PRESSURE:
                 ImGui::InputFloat("Initial Boundary Distance", &initial_distance);
-                initial_distance = std::clamp(initial_distance, 0.f, 1.f);
+                initial_distance = std::clamp(initial_distance, 0.f, (n + 1.f) / 10.f);
                 break;
             default:
                 break;

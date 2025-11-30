@@ -218,8 +218,8 @@ public:
         Matrix3X binormals(3, m_n);
         for (uint32_t col_index = 0; col_index < m_n; ++col_index)
         {
-            binormals.col(col_index) = 2 * edges.col(col_index).cross(edges.col(col_index + 1));
-            binormals.col(col_index) *= 1 / (edges.col(col_index).norm() * edges.col(col_index + 1).norm() +
+            binormals.col(col_index) = edges.col(col_index).cross(2 * edges.col(col_index + 1));
+            binormals.col(col_index) *= 1 / (m_edge_length(col_index) * m_edge_length(col_index + 1) +
                                              edges.col(col_index).dot(edges.col(col_index + 1)));
         }
         return binormals;

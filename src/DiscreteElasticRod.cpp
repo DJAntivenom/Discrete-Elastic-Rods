@@ -46,6 +46,9 @@ DiscreteElasticRod::DiscreteElasticRod(const InitialConfiguration &ic,
 
 void DiscreteElasticRod::update(double delta_time, size_t max_newton_iterations)
 {
+#ifdef KEEP_TURNING
+    m_edge_theta[m_n] += 10 * M_PI * delta_time;
+#endif
     /* algorithm outline */
 
     /// 4., 5. apply torque and integrate rigid body
