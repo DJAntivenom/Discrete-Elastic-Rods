@@ -31,7 +31,7 @@ static std::vector<Matrix3> nabla_curvature_binormal(
 
     Matrix3 nabla_min_1 = (2 * skew_e_i + kb_i * e_i.transpose()) / denominator;
     // TODO: Fix this computation if paper has typo?
-    Matrix3 nabla_plus_1 = (2 * skew_e_i_min_1 + kb_i * e_i_min_1.transpose()) / denominator;
+    Matrix3 nabla_plus_1 = (2 * skew_e_i_min_1 - kb_i * e_i_min_1.transpose()) / denominator;
     Matrix3 nabla = -(nabla_min_1 + nabla_plus_1);
 
     return { nabla_min_1, nabla, nabla_plus_1 };
@@ -85,7 +85,7 @@ void DiscreteElasticRod::doSymplecticEuler(double delta_time)
                 f.col(j) += force_position; // TODO: Is j or i correct?
 
                 // Angle contribution
-                Vector3 force_angle = +m_beta * start_to_end_theta / m_total_rod_length * nabla_psi[j_nabla];
+                Vector3 force_angle = m_beta * start_to_end_theta / m_total_rod_length * nabla_psi[j_nabla];
                 f.col(j) += force_angle; // TODO: Is j or i correct?
             }
 
@@ -94,9 +94,7 @@ void DiscreteElasticRod::doSymplecticEuler(double delta_time)
             f(1, i) = m_vertex_mass[i] * -9.81f;
 #endif
 
-            // TODO: Looks like there's an off by one error, node i==8 has force instead of i==9
-            print_debug("Force on node " + std::to_string(i) + ":");
-            print_debug(f.col(i));
+
         }
     }
     else
@@ -106,8 +104,13 @@ void DiscreteElasticRod::doSymplecticEuler(double delta_time)
             "DiscreteElasticRod::doSymplecticEuler(double): Not implemented for non-straight or non-isotropic case"));
     }
 
+    for (int i = 0; i <= m_n + 1; i++) {
+        print_debug("Force on node " + std::to_string(i) + ":");
+        print_debug(f.col(i));
+    }
+
     // --- Apply symplectic euler update
-    for (uint64_t i = 1; i <= m_n; i++)
+    for (uint64_t i = 0; i <= m_n+1; i++)
     {
         m_vertex_velocities.col(i) += delta_time * f.col(i) / m_vertex_mass[i];
         m_vertex_positions.col(i) += m_vertex_velocities.col(i) * delta_time;

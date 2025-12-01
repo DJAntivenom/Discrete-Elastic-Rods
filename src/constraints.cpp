@@ -5,12 +5,12 @@
 #include <stdexcept>
 
 #if true
-    #define FIRST_METHOD
-#else
+     #define FIRST_METHOD
+ #else
     #define SECOND_METHOD
 #endif
 
-#if false
+#if true
     #define ENDPOINTS
 #endif
 
@@ -228,15 +228,15 @@ bool DiscreteElasticRod::getConstraintHessian(const Opt::VectorX &x_lambda, Opt:
 
         //For second constraint formulation
 #ifdef SECOND_METHOD
-        d2C_Stretch[0] = 4;
+        d2C_Stretch[0] = 2;
         d2C_Stretch[1] = 0;
         d2C_Stretch[2] = 0;
         d2C_Stretch[3] = 0;
-        d2C_Stretch[4] = 4;
+        d2C_Stretch[4] = 2;
         d2C_Stretch[5] = 0;
         d2C_Stretch[6] = 0;
         d2C_Stretch[7] = 0;
-        d2C_Stretch[8] = 4;
+        d2C_Stretch[8] = 2;
 
 #endif
 
@@ -245,10 +245,10 @@ bool DiscreteElasticRod::getConstraintHessian(const Opt::VectorX &x_lambda, Opt:
 
 #ifdef ENDPOINTS
     //For first vertex
-    auto maple_hessian_last_vertex = [](const Vector3 &x_plus_1, const Vector3 &x_i, const Vector2 &e_bar) {
+    auto maple_hessian_first_vertex = [](const Vector3 &x_plus_1, const Vector3 &x_i, const Vector2 &e_bar) {
         Eigen::Matrix<Float, 9, 1> d2C_Stretch_plus;
         d2C_Stretch_plus.setZero();
-
+#ifdef FIRST_METHOD
         //For first constraint formulation
         Float t1 = x_plus_1[0] - x_i[0];
         Float t2 = x_plus_1[1] - x_i[1];
@@ -274,16 +274,29 @@ bool DiscreteElasticRod::getConstraintHessian(const Opt::VectorX &x_lambda, Opt:
         d2C_Stretch_plus[6] = t1;
         d2C_Stretch_plus[7] = t2;
         d2C_Stretch_plus[8] = t6 * t7 + t9 * (t6 * t8 - t10);
+#endif
 
+#ifdef SECOND_METHOD
+        d2C_Stretch_plus[0] = 1;
+        d2C_Stretch_plus[1] = 0;
+        d2C_Stretch_plus[2] = 0;
+        d2C_Stretch_plus[3] = 0;
+        d2C_Stretch_plus[4] = 1;
+        d2C_Stretch_plus[5] = 0;
+        d2C_Stretch_plus[6] = 0;
+        d2C_Stretch_plus[7] = 0;
+        d2C_Stretch_plus[8] = 1;
+#endif
         //In second constraint formulation, just Identity
 
         return d2C_Stretch_plus.reshaped(3, 3);
     };
 
-    auto maple_hessian_first_vertex = [](const Vector3 &x_min_1, const Vector3 &x_i, const Vector2 &e_bar) {
+    auto maple_hessian_last_vertex = [](const Vector3 &x_min_1, const Vector3 &x_i, const Vector2 &e_bar) {
         Eigen::Matrix<Float, 9, 1> d2C_Stretch_min;
         d2C_Stretch_min.setZero();
 
+#ifdef FIRST_METHOD
         //For first constraint formulation
         Float t1 = x_min_1[0] - x_i[0];
         Float t2 = x_min_1[1] - x_i[1];
@@ -309,8 +322,20 @@ bool DiscreteElasticRod::getConstraintHessian(const Opt::VectorX &x_lambda, Opt:
         d2C_Stretch_min[6] = t1;
         d2C_Stretch_min[7] = t2;
         d2C_Stretch_min[8] = t4 * t7 + t9 * (t4 * t8 - t10);
+#endif
+        //For second constraint formulation, just identity¨
 
-        //For second constraint formulation, just identity
+#ifdef SECOND_METHOD
+        d2C_Stretch_min[0] = 1;
+        d2C_Stretch_min[1] = 0;
+        d2C_Stretch_min[2] = 0;
+        d2C_Stretch_min[3] = 0;
+        d2C_Stretch_min[4] = 1;
+        d2C_Stretch_min[5] = 0;
+        d2C_Stretch_min[6] = 0;
+        d2C_Stretch_min[7] = 0;
+        d2C_Stretch_min[8] = 1;
+#endif
 
         return d2C_Stretch_min.reshaped(3, 3);
     };
@@ -343,31 +368,17 @@ bool DiscreteElasticRod::getConstraintHessian(const Opt::VectorX &x_lambda, Opt:
 #ifdef ENDPOINTS
     Matrix3 maple_hessian_first =
         //For first constraint formulation
-#ifdef  FIRST_METHOD
         maple_hessian_first_vertex(
          x_lambda.segment<3>(3),
          x_lambda.segment<3>(0),
          Vector2(m_edge_length(0), 0.f));
-#endif FIRST_METHOD
-
-        //For second constraint formulation
-#ifdef SECOND_METHOD
-        Matrix3::Identity();
-#endif SECOND_METHOD
 
     Matrix3 maple_hessian_last =
         //For first constraint formulation
-#ifdef  FIRST_METHOD
         maple_hessian_last_vertex(
      x_lambda.segment<3>(3 * m_n),
         x_lambda.segment<3>(3 * (m_n + 1)),
         Vector2(0.f, m_edge_length(m_n)));
-#endif
-
-        //For second constraint formulation
-#ifdef SECOND_METHOD
-        Matrix3::Identity();
-#endif
 
     // For endpoint constraints
     for (int offset = 0; offset < 3; offset++) {
@@ -380,7 +391,6 @@ bool DiscreteElasticRod::getConstraintHessian(const Opt::VectorX &x_lambda, Opt:
         }
     }
 #endif
-
 
     //print_debug("[getHessian] exit");
 
