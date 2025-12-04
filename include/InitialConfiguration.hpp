@@ -96,7 +96,8 @@ protected:
     InitialConfiguration(uint64_t n, float radius) :
         m_n(n),
         m_radius(radius),
-        m_initial_positions(3, n + 2)
+        m_initial_positions(3, n + 2),
+        m_rest_omega(4, n + 2)
     {
     };
 

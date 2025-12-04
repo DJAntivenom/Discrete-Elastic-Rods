@@ -23,7 +23,7 @@
 #endif
 
 #ifndef KEEP_TURNING
-    #define KEEP_TURNING
+    //#define KEEP_TURNING
 #endif
 
 /////////////

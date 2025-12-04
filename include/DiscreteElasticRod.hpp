@@ -19,6 +19,21 @@ public:
     using Opt = Optimization<Float>;
 
 private:
+    DiscreteElasticRod(Matrix3X &vertex_positions,
+                                        VectorX &edge_lengths,
+                                        Matrix3X &vertex_velocities,
+                                        Vector3 &bishop_frame_vector,
+                                        Matrix3X &bishop_frame,
+                                        VectorX &edge_theta,
+                                        VectorX &vertex_mass,
+                                        VectorX &l_i,
+                                        Matrix2 &B_matrix,
+                                        Matrix4X &w_overbar,
+                                        int n,
+                                        Float radius,
+                                        bool is_straight_isotropic,
+                                        Float alpha,
+                                        Float beta);
     /**
      * \brief Matrix of vertex positionts, 3x(n+2)
      *
@@ -126,6 +141,8 @@ public:
      * \param delta_time The number of seconds that have passed since the last update.
      */
     void update(double delta_time, size_t max_newton_iterations);
+
+    inline const uint64_t getN() const { return m_n; }
 
     /**
      * @brief Get the stacked vertex positions.
@@ -265,6 +282,14 @@ public:
     polyscope::SurfaceMesh *registerSurfaceMesh(const std::string &name,
                                                 uint32_t vertices_per_ring = 8u) const;
 
+    /**
+     * @brief Cuts the current rod into two separate rods. It is expected that you delete the current rod afterwards.
+     * @param i The vertex at which the rod should be cut. This cannot be 0 or m_n + 1
+     * @return a pair of DiscreteElasticRods
+     */
+    std::pair<DiscreteElasticRod, DiscreteElasticRod> cutAtVertex(int i);
+
+
 private:
     void doSymplecticEuler(double delta_time);
 
@@ -277,6 +302,7 @@ private:
     bool getConstraints(const Opt::VectorX &q_r_x, Opt::Float &energy) const;
     bool getConstraintGradient(const Opt::VectorX &q_r_x, Opt::VectorX &gradient) const;
     bool getConstraintHessian(const Opt::VectorX &q_r_x, Opt::TripletList &hessian) const;
+
 };
 
 #endif

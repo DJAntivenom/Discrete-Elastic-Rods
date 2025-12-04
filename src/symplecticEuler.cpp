@@ -2,7 +2,7 @@
 #include <common.h>
 #include <stdexcept>
 
-// #define USE_GRAVITY
+#define USE_GRAVITY
 
 /**
  * Curvature binormal derivative by other node, $\nabla_i(kb)_i$, from paper chapter 7.1.
@@ -91,7 +91,7 @@ void DiscreteElasticRod::doSymplecticEuler(double delta_time)
 
             // Gravity, pulling down
 #ifdef USE_GRAVITY
-            f(1, i) = m_vertex_mass[i] * -9.81f;
+            f(1, i) += m_vertex_mass[i] * -9.81f;
 #endif
 
 

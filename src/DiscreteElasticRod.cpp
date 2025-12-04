@@ -44,6 +44,43 @@ DiscreteElasticRod::DiscreteElasticRod(const InitialConfiguration &ic,
     transportBishopFrame();
 }
 
+/*
+ * !ONLY TO BE USED FOR THE CUTTING METHOD DISCRETEELASTICROD::CUTATVERTEX!
+ */
+DiscreteElasticRod::DiscreteElasticRod(Matrix3X &vertex_positions,
+                                        VectorX &edge_lengths,
+                                        Matrix3X &vertex_velocities,
+                                        Vector3 &bishop_frame_vector,
+                                        Matrix3X &bishop_frame,
+                                        VectorX &edge_theta,
+                                        VectorX &vertex_mass,
+                                        VectorX &l_i,
+                                        Matrix2 &B_matrix,
+                                        Matrix4X &w_overbar,
+                                        int n,
+                                        Float radius,
+                                        bool is_straight_isotropic,
+                                        Float alpha,
+                                        Float beta) :
+    m_vertex_positions(vertex_positions),
+    m_edge_length(edge_lengths),
+    m_vertex_velocities(vertex_velocities),
+    m_bishop_frame_vector(bishop_frame_vector),
+    m_bishop_frame(bishop_frame),
+    m_edge_theta(edge_theta),
+    m_vertex_mass(vertex_mass),
+    m_l_i(l_i),
+    m_n(n),
+    m_radius(radius),
+    m_is_straight_isotropic(is_straight_isotropic),
+    m_alpha(alpha),
+    m_beta(beta),
+    m_B_matrix(B_matrix),
+    m_w_overbar(w_overbar)
+{
+    m_total_rod_length = m_edge_length.sum();
+}
+
 void DiscreteElasticRod::update(double delta_time, size_t max_newton_iterations)
 {
 #ifdef KEEP_TURNING
@@ -304,4 +341,72 @@ Matrix4X DiscreteElasticRod::getMaterialCurvature(const VectorX &theta) const
     }
 
     return curvature;
+}
+
+std::pair<DiscreteElasticRod, DiscreteElasticRod> DiscreteElasticRod::cutAtVertex(int i) {
+    assert(i > 0 && i < m_n + 1);
+    print_debug(m_n + 2);
+    print_debug(i);
+
+    Matrix3X vertex_positions_1 = m_vertex_positions.leftCols(i + 1);
+    Matrix3X vertex_positions_2 = m_vertex_positions.rightCols(m_n + 2 - i);
+
+    print_debug(m_vertex_positions.cols());
+    print_debug(vertex_positions_1.cols());
+    print_debug(vertex_positions_2.cols());
+
+    VectorX edge_lengths_1 = m_edge_length.head(i);
+    VectorX edge_lengths_2 = m_edge_length.tail(m_n + 1 - i);
+
+    print_debug(m_edge_length.size());
+    print_debug(edge_lengths_1.size());
+    print_debug(edge_lengths_2.size());
+
+    Matrix3X vertex_velocities_1 = m_vertex_velocities.leftCols(i + 1);
+    Matrix3X vertex_velocities_2 = m_vertex_velocities.rightCols(m_n + 2 - i);
+
+    print_debug(m_vertex_velocities.cols());
+    print_debug(vertex_velocities_1.cols());
+    print_debug(vertex_velocities_2.cols());
+
+    Vector3 bishop_frame_vector_1 = m_bishop_frame_vector;
+    Vector3 bishop_frame_vector_2 = m_bishop_frame_vector;
+
+    Matrix3X bishop_frame_1 = m_bishop_frame.leftCols(i);
+    Matrix3X bishop_frame_2 = m_bishop_frame.rightCols(m_n + 1 - i);
+
+    VectorX edge_theta_1 = m_edge_theta.head(i);
+    VectorX edge_theta_2 = m_edge_theta.tail(m_n + 1 - i);
+
+    VectorX vertex_mass_1 = m_vertex_mass.head(i + 1);
+    VectorX vertex_mass_2 = m_vertex_mass.tail(m_n + 2 - i);
+
+    VectorX l_i_1 = m_l_i.head(i + 1);
+    VectorX l_i_2 = m_l_i.tail(m_n + 2 - i);
+
+    Matrix4X w_overbar_1 = m_w_overbar.leftCols(i + 1);
+    Matrix4X w_overbar_2 = m_w_overbar.rightCols(m_n + 2 - i);
+
+    int n_1 = i - 1;
+    int n_2 = m_n - i;
+
+    print_debug(m_n);
+    print_debug(n_1);
+    print_debug(n_2);
+
+    DiscreteElasticRod discrete_elastic_rod_1(vertex_positions_1,
+        edge_lengths_1, vertex_positions_1, bishop_frame_vector_1,
+        bishop_frame_1, edge_theta_1, vertex_mass_1,
+        l_i_1, m_B_matrix, w_overbar_1, n_1,
+        m_radius, m_is_straight_isotropic, m_alpha, m_beta) ;
+
+    DiscreteElasticRod discrete_elastic_rod_2(vertex_positions_2,
+        edge_lengths_2, vertex_positions_2, bishop_frame_vector_2,
+        bishop_frame_2, edge_theta_2, vertex_mass_2,
+        l_i_2, m_B_matrix, w_overbar_2, n_2,
+        m_radius, m_is_straight_isotropic, m_alpha, m_beta);
+
+    //TODO: Test that no data is duplicated (except for the final vertex) or lost this way
+    //TODO: how to delete this rod after creating the other two, and make sure that these new ones are animated?
+    return std::make_pair(discrete_elastic_rod_1, discrete_elastic_rod_2);
 }

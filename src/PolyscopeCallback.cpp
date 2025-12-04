@@ -20,6 +20,7 @@
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 #pragma GCC diagnostic ignored "-Wunused-function"
+#include <charconv>
 #include <polyscope/curve_network.h>
 #include <polyscope/polyscope.h>
 #include <polyscope/surface_mesh.h>
@@ -219,6 +220,33 @@ static void initializeRod(const InitialConfiguration &config, float alpha, float
     handle_colors(handles.rows() - 4, Eigen::seq(0, 2)) = handle_colors(handles.rows() - 1, Eigen::seq(0, 2)) = Eigen::Vector3f(0.0, 1.0, 0.0).transpose();
 }
 
+static void addRod(DiscreteElasticRod rod) {
+    rods.emplace_back(rod);
+
+    rod_thetas.resize(2, rod_thetas.cols() + 1);
+    rod_thetas.col(rod_thetas.cols() - 1).setZero();
+
+    // Add the new handle positions
+    handles.resize(handles.rows() + handles_count, 3);
+    handle_colors.resize(handle_colors.rows() + handles_count, 3);
+
+    // Initialize positions
+    const uint64_t rod_count = rods.size();
+    for (uint64_t rod_index = 0; rod_index < rod_count; ++rod_index)
+    {
+        updateRodHandles(rod_index);
+    }
+
+    // Set the colors
+    handle_colors(Eigen::seq(handles.rows() - handles_count, handles.rows() - 1), Eigen::seq(0, 2)).setZero();
+    // Blue for the endpoints
+    handle_colors(handles.rows() - 6, Eigen::seq(0, 2)) = handle_colors(handles.rows() - 3, Eigen::seq(0, 2)) = Eigen::Vector3f(0.0, 0.0, 1.0).transpose();
+    // Red for the direction
+    handle_colors(handles.rows() - 5, Eigen::seq(0, 2)) = handle_colors(handles.rows() - 2, Eigen::seq(0, 2)) = Eigen::Vector3f(1.0, 0.0, 0.0).transpose();
+    // Green for the orientation
+    handle_colors(handles.rows() - 4, Eigen::seq(0, 2)) = handle_colors(handles.rows() - 1, Eigen::seq(0, 2)) = Eigen::Vector3f(0.0, 1.0, 0.0).transpose();
+}
+
 /**
  * \brief Tries applying handle update to the rod
  */
@@ -279,10 +307,11 @@ static void makeConfigWindow()
         if (rods.size() > 0)
         {
             uint64_t rods_size = rods.size();
-            for (uint64_t rod_index = 0; rod_index < rods_size; rod_index++)
-            {
-                bool start_changed = ImGui::SliderAngle("Rod start", &rod_thetas(0, rod_index), 0);
-                bool end_changed = ImGui::SliderAngle("Rod end", &rod_thetas(1, rod_index), 0);
+            for (uint64_t rod_index = 0; rod_index < rods_size; rod_index++) {
+                const std::string label_start = "Rod start for rod " + std::to_string(rod_index);
+                const std::string label_end = "Rod end for rod " + std::to_string(rod_index);
+                bool start_changed = ImGui::SliderAngle(label_start.c_str(), &rod_thetas(0, rod_index), 0);
+                bool end_changed = ImGui::SliderAngle(label_end.c_str(), &rod_thetas(1, rod_index), 0);
                 if (start_changed || end_changed)
                 {
                     rods[rod_index].setBoundaryEdgeThetas(rod_thetas(0, rod_index), rod_thetas(1, rod_index));
@@ -331,6 +360,22 @@ static void makeConfigWindow()
             if (ImGui::Button("Delete rod"))
             {
                 rods.clear();
+            }
+            if (ImGui::Button("Cut In Half")) {
+                std::vector<DiscreteElasticRod> temp;
+                for (int i = 0; i < rods.size(); i++) {
+                    if (rods[i].getN() >= 1) {
+                        auto cut_rods = rods[i].cutAtVertex((int) (rods[i].getN() + 2) / 2 );
+                        temp.emplace_back(cut_rods.first);
+                        temp.emplace_back(cut_rods.second);
+                    } else {
+                        temp.emplace_back(rods[i]);
+                    }
+                }
+                rods.clear();
+                for (int i = 0; i < temp.size(); i++) {
+                    addRod(temp[i]);
+                }
             }
         }
     }
@@ -382,6 +427,8 @@ static void makeConfigWindow()
         ImGui::Text("Color u: Red");
         ImGui::Text("Color v: Blue");
     }
+
+
 }
 
 /**
