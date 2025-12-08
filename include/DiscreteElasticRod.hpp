@@ -6,50 +6,34 @@
 #ifndef __DISCRETE_ELASTIC_ROD_HPP__
 #define __DISCRETE_ELASTIC_ROD_HPP__
 
+#include "common.h"
 #include "Optimization.h"
+#include "InitialConfiguration.hpp"
 
 #include <string>
-
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-parameter"
-#pragma GCC diagnostic ignored "-Wunused-function"
-#include <polyscope/surface_mesh.h>
-#pragma GCC diagnostic pop
-
-#include <Eigen/Eigen>
 
 class DiscreteElasticRod
 {
 public:
-    /**
-     * @brief The datatype of the values stored in this rod.
-     */
-    using Float = double;
-
-    /// Vectors
-    using Vector2 = Eigen::Vector2<Float>;
-    using Vector3 = Eigen::Vector3<Float>;
-    using VectorX = Eigen::VectorX<Float>;
-
-    /// Fixed-size matrices
-    using Matrix2 = Eigen::Matrix2<Float>;
-    using Matrix3 = Eigen::Matrix3<Float>;
-
-    /// Partially-dynamic matrices
-    using Matrix3X = Eigen::Matrix3X<Float>;
-    using MatrixX3 = Eigen::MatrixX3<Float>;
-    using Matrix4X = Eigen::Matrix4X<Float>;
-
-    /// Rotations
-    using AngleAxis = Eigen::AngleAxis<Float>;
-    using AffineTransform3D = Eigen::Transform<Float, 3, Eigen::Affine>;
-    using GeneralTransform3D = Eigen::Transform<Float, 3, Eigen::Projective>;
-    using IsometricTransform3D = Eigen::Transform<Float, 3, Eigen::Isometry>;
-
     /// Optimizer
     using Opt = Optimization<Float>;
 
 private:
+    DiscreteElasticRod(Matrix3X &vertex_positions,
+                                        VectorX &edge_lengths,
+                                        Matrix3X &vertex_velocities,
+                                        Vector3 &bishop_frame_vector,
+                                        Matrix3X &bishop_frame,
+                                        VectorX &edge_theta,
+                                        VectorX &vertex_mass,
+                                        VectorX &l_i,
+                                        Matrix2 &B_matrix,
+                                        Matrix4X &w_overbar,
+                                        int n,
+                                        Float radius,
+                                        bool is_straight_isotropic,
+                                        Float alpha,
+                                        Float beta);
     /**
      * \brief Matrix of vertex positionts, 3x(n+2)
      *
@@ -114,12 +98,12 @@ private:
     /**
      * \brief Corresponds to n from the paper, i.e. count of all internal vertices.
      */
-    uint64_t m_n;
+    const uint64_t m_n;
 
     /**
      * \brief Radius of the rod.
      */
-    float m_radius;
+    const float m_radius;
 
     /**
      * @brief Set when positions of vertices are randomized or moved.
@@ -129,7 +113,7 @@ private:
     /**
      * \brief Material parameters.
      */
-    Float m_alpha, m_beta;
+    const Float m_alpha, m_beta;
 
     /**
      * \brief \overbar{B}^j from the paper.
@@ -147,9 +131,9 @@ public:
      * @param n The number of inner vertices. There will be 2 more vertices,
      *  corresponding to the constrained boundary vertices.
      */
-    DiscreteElasticRod(uint64_t n,
-                       Float alpha, Float beta,
-                       float radius = 0.05f, float theta_zero = 0.f, float theta_n = 0.f);
+    DiscreteElasticRod(const InitialConfiguration &initial_configuration,
+                       Float alpha, Float beta);
+
     virtual ~DiscreteElasticRod() = default;
 
     /**
@@ -157,6 +141,8 @@ public:
      * \param delta_time The number of seconds that have passed since the last update.
      */
     void update(double delta_time, size_t max_newton_iterations);
+
+    inline uint64_t getN() const { return m_n; }
 
     /**
      * @brief Get the stacked vertex positions.
@@ -249,8 +235,8 @@ public:
         Matrix3X binormals(3, m_n);
         for (uint32_t col_index = 0; col_index < m_n; ++col_index)
         {
-            binormals.col(col_index) = 2 * edges.col(col_index).cross(edges.col(col_index + 1));
-            binormals.col(col_index) *= 1 / (edges.col(col_index).norm() * edges.col(col_index + 1).norm() +
+            binormals.col(col_index) = edges.col(col_index).cross(2 * edges.col(col_index + 1));
+            binormals.col(col_index) *= 1 / (m_edge_length(col_index) * m_edge_length(col_index + 1) +
                                              edges.col(col_index).dot(edges.col(col_index + 1)));
         }
         return binormals;
@@ -296,6 +282,14 @@ public:
     polyscope::SurfaceMesh *registerSurfaceMesh(const std::string &name,
                                                 uint32_t vertices_per_ring = 8u) const;
 
+    /**
+     * @brief Cuts the current rod into two separate rods. It is expected that you delete the current rod afterwards.
+     * @param i The vertex at which the rod should be cut. This cannot be 0 or m_n + 1
+     * @return a pair of DiscreteElasticRods
+     */
+    std::pair<DiscreteElasticRod, DiscreteElasticRod> cutAtVertex(int i);
+
+
 private:
     void doSymplecticEuler(double delta_time);
 
@@ -308,6 +302,7 @@ private:
     bool getConstraints(const Opt::VectorX &q_r_x, Opt::Float &energy) const;
     bool getConstraintGradient(const Opt::VectorX &q_r_x, Opt::VectorX &gradient) const;
     bool getConstraintHessian(const Opt::VectorX &q_r_x, Opt::TripletList &hessian) const;
+
 };
 
 #endif

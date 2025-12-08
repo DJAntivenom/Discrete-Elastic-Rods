@@ -4,21 +4,21 @@
 
 #include <stdexcept>
 
-#if false
-    #define FIRST_METHOD
-#else
+#if true
+     #define FIRST_METHOD
+ #else
     #define SECOND_METHOD
 #endif
 
-#if false
+#if true
     #define ENDPOINTS
 #endif
 
 bool DiscreteElasticRod::getConstraints(const Opt::VectorX &x_lambda, Opt::Float &energy) const {
-    print_debug("");
+    //print_debug("");
 
     VectorX C = VectorX::Zero(m_n + 1);
-    for (int i = 0; i <= m_n; i++) {
+    for (uint64_t i = 0; i <= m_n; i++) {
         //For first constraint formulation
         // $E_s = 1/2 (|x_{i+1} - x_i| - |\bar{e_i}|)^2$
 #ifdef FIRST_METHOD
@@ -31,29 +31,26 @@ bool DiscreteElasticRod::getConstraints(const Opt::VectorX &x_lambda, Opt::Float
         // $E_s = 1/2 (|x_{i+1} - x_i|^2 - |\bar{e_i}|^2)$
         Float squared_edge_length = (x_lambda.segment<3>(3 * (i + 1)) - x_lambda.segment<3>(3 * i)).squaredNorm();
         C(i) = 0.5 * (squared_edge_length - std::pow(m_edge_length(i), 2));
-        if (C(i) > 100) {
-            print_debug("vertex " + std::to_string(i+1) + ": ");
-            print_debug(x_lambda.segment<3>(3 * (i + 1)));
-            print_debug("vertex " + std::to_string(i) + ": ");
-            print_debug(x_lambda.segment<3>(3 * i));
-            print_debug("because squared_edge_length is " + std::to_string(squared_edge_length) + " and m_edge_length is " + std::to_string(m_edge_length(i)));
-            print_debug("energy at vertex " + std::to_string(i) + " is too high" );
-        }
+        // if (C(i) > 100) {
+        //     print_debug("vertex " + std::to_string(i+1) + ": ");
+        //     print_debug(x_lambda.segment<3>(3 * (i + 1)));
+        //     print_debug("vertex " + std::to_string(i) + ": ");
+        //     print_debug(x_lambda.segment<3>(3 * i));
+        //     print_debug("because squared_edge_length is " + std::to_string(squared_edge_length) + " and m_edge_length is " + std::to_string(m_edge_length(i)));
+        //     print_debug("energy at vertex " + std::to_string(i) + " is too high" );
+        // }
 #endif
 
     }
 
     energy = C.sum();
 
-    if (energy > 100) {
-        print_debug("energy too high wtf");
-    }
-    print_debug("the constraint energy is " + std::to_string(energy));
+    //print_debug("the constraint energy is " + std::to_string(energy));
     return true;
 }
 
 bool DiscreteElasticRod::getConstraintGradient(const Opt::VectorX &x_lambda, Opt::VectorX &gradient) const {
-    print_debug("");
+    //print_debug("");
 
     auto maple_gradient = [](const Vector3 &x_min_1, const Vector3 &x_i, const Vector3 &x_plus_1, const Vector2 &e_bar)
     {
@@ -82,10 +79,11 @@ bool DiscreteElasticRod::getConstraintGradient(const Opt::VectorX &x_lambda, Opt
 
 #ifdef SECOND_METHOD
         //For second constraint formulation
-        Float t1 = 2;
-        dC_Stretch[0] = t1 * x_i[0] - x_min_1[0] - x_plus_1[0];
-        dC_Stretch[1] = t1 * x_i[1] - x_min_1[1] - x_plus_1[1];
-        dC_Stretch[2] = t1 * x_i[2] - x_min_1[2] - x_plus_1[2];
+        Float t1 = -2;
+        dC_Stretch[0] = t1 * (x_min_1[0] + x_plus_1[0]) + 4 * x_i[0];
+        dC_Stretch[1] = t1 * (x_min_1[1] + x_plus_1[1]) + 4 * x_i[1];
+        dC_Stretch[2] = t1 * (x_min_1[2] + x_plus_1[2]) + 4 * x_i[2];
+
 #endif
 
         return dC_Stretch;
@@ -153,7 +151,7 @@ bool DiscreteElasticRod::getConstraintGradient(const Opt::VectorX &x_lambda, Opt
 
     // For inextensibility, do not allow vertices 0 and n+1 to move, since they are fixed.
     // TODO: Validate if this sum range is correct
-    for (int i = 1; i <= m_n; i++) {
+    for (uint64_t i = 1; i <= m_n; i++) {
         gradient.segment<3>(3 * i) = maple_gradient(
             x_lambda.segment<3>(3 * (i-1)),
             x_lambda.segment<3>(3 * i),
@@ -174,13 +172,13 @@ bool DiscreteElasticRod::getConstraintGradient(const Opt::VectorX &x_lambda, Opt
 #endif
 
 
-    print_debug("constraint gradient magnitude is " + std::to_string(gradient.norm()));
+    //print_debug("constraint gradient magnitude is " + std::to_string(gradient.norm()));
     return true;
 }
 
 
 bool DiscreteElasticRod::getConstraintHessian(const Opt::VectorX &x_lambda, Opt::TripletList &hessian) const {
-    print_debug("DiscreteElasticRod::getConstraintHessian");
+    //print_debug("DiscreteElasticRod::getConstraintHessian");
 
     auto maple_hessian = [](const Vector3 &x_min_1, const Vector3 &x_i, const Vector3 &x_plus_1, const Vector2 &e_bar)
     {
@@ -230,15 +228,16 @@ bool DiscreteElasticRod::getConstraintHessian(const Opt::VectorX &x_lambda, Opt:
 
         //For second constraint formulation
 #ifdef SECOND_METHOD
-         d2C_Stretch[0] = 2;
-         d2C_Stretch[1] = 0;
-         d2C_Stretch[2] = 0;
-         d2C_Stretch[3] = 0;
-         d2C_Stretch[4] = 2;
-         d2C_Stretch[5] = 0;
-         d2C_Stretch[6] = 0;
-         d2C_Stretch[7] = 0;
-         d2C_Stretch[8] = 2;
+        d2C_Stretch[0] = 2;
+        d2C_Stretch[1] = 0;
+        d2C_Stretch[2] = 0;
+        d2C_Stretch[3] = 0;
+        d2C_Stretch[4] = 2;
+        d2C_Stretch[5] = 0;
+        d2C_Stretch[6] = 0;
+        d2C_Stretch[7] = 0;
+        d2C_Stretch[8] = 2;
+
 #endif
 
         return d2C_Stretch.reshaped(3, 3);
@@ -246,10 +245,10 @@ bool DiscreteElasticRod::getConstraintHessian(const Opt::VectorX &x_lambda, Opt:
 
 #ifdef ENDPOINTS
     //For first vertex
-    auto maple_hessian_last_vertex = [](const Vector3 &x_plus_1, const Vector3 &x_i, const Vector2 &e_bar) {
+    auto maple_hessian_first_vertex = [](const Vector3 &x_plus_1, const Vector3 &x_i, const Vector2 &e_bar) {
         Eigen::Matrix<Float, 9, 1> d2C_Stretch_plus;
         d2C_Stretch_plus.setZero();
-
+#ifdef FIRST_METHOD
         //For first constraint formulation
         Float t1 = x_plus_1[0] - x_i[0];
         Float t2 = x_plus_1[1] - x_i[1];
@@ -275,16 +274,29 @@ bool DiscreteElasticRod::getConstraintHessian(const Opt::VectorX &x_lambda, Opt:
         d2C_Stretch_plus[6] = t1;
         d2C_Stretch_plus[7] = t2;
         d2C_Stretch_plus[8] = t6 * t7 + t9 * (t6 * t8 - t10);
+#endif
 
+#ifdef SECOND_METHOD
+        d2C_Stretch_plus[0] = 1;
+        d2C_Stretch_plus[1] = 0;
+        d2C_Stretch_plus[2] = 0;
+        d2C_Stretch_plus[3] = 0;
+        d2C_Stretch_plus[4] = 1;
+        d2C_Stretch_plus[5] = 0;
+        d2C_Stretch_plus[6] = 0;
+        d2C_Stretch_plus[7] = 0;
+        d2C_Stretch_plus[8] = 1;
+#endif
         //In second constraint formulation, just Identity
 
         return d2C_Stretch_plus.reshaped(3, 3);
     };
 
-    auto maple_hessian_first_vertex = [](const Vector3 &x_min_1, const Vector3 &x_i, const Vector2 &e_bar) {
+    auto maple_hessian_last_vertex = [](const Vector3 &x_min_1, const Vector3 &x_i, const Vector2 &e_bar) {
         Eigen::Matrix<Float, 9, 1> d2C_Stretch_min;
         d2C_Stretch_min.setZero();
 
+#ifdef FIRST_METHOD
         //For first constraint formulation
         Float t1 = x_min_1[0] - x_i[0];
         Float t2 = x_min_1[1] - x_i[1];
@@ -310,15 +322,27 @@ bool DiscreteElasticRod::getConstraintHessian(const Opt::VectorX &x_lambda, Opt:
         d2C_Stretch_min[6] = t1;
         d2C_Stretch_min[7] = t2;
         d2C_Stretch_min[8] = t4 * t7 + t9 * (t4 * t8 - t10);
+#endif
+        //For second constraint formulation, just identity¨
 
-        //For second constraint formulation, just identity
+#ifdef SECOND_METHOD
+        d2C_Stretch_min[0] = 1;
+        d2C_Stretch_min[1] = 0;
+        d2C_Stretch_min[2] = 0;
+        d2C_Stretch_min[3] = 0;
+        d2C_Stretch_min[4] = 1;
+        d2C_Stretch_min[5] = 0;
+        d2C_Stretch_min[6] = 0;
+        d2C_Stretch_min[7] = 0;
+        d2C_Stretch_min[8] = 1;
+#endif
 
         return d2C_Stretch_min.reshaped(3, 3);
     };
 #endif
 
 
-    for (int i = 1; i <= m_n; i++)
+    for (uint64_t i = 1; i <= m_n; i++)
     {
         Vector3 x_min_1 = x_lambda.segment<3>(3 * (i-1));
         Vector3 x_i = x_lambda.segment<3>(3 * i);
@@ -344,31 +368,17 @@ bool DiscreteElasticRod::getConstraintHessian(const Opt::VectorX &x_lambda, Opt:
 #ifdef ENDPOINTS
     Matrix3 maple_hessian_first =
         //For first constraint formulation
-#ifdef  FIRST_METHOD
         maple_hessian_first_vertex(
          x_lambda.segment<3>(3),
          x_lambda.segment<3>(0),
          Vector2(m_edge_length(0), 0.f));
-#endif FIRST_METHOD
-
-        //For second constraint formulation
-#ifdef SECOND_METHOD
-        Matrix3::Identity();
-#endif SECOND_METHOD
 
     Matrix3 maple_hessian_last =
         //For first constraint formulation
-#ifdef  FIRST_METHOD
         maple_hessian_last_vertex(
      x_lambda.segment<3>(3 * m_n),
         x_lambda.segment<3>(3 * (m_n + 1)),
         Vector2(0.f, m_edge_length(m_n)));
-#endif
-
-        //For second constraint formulation
-#ifdef SECOND_METHOD
-        Matrix3::Identity();
-#endif
 
     // For endpoint constraints
     for (int offset = 0; offset < 3; offset++) {
@@ -382,14 +392,13 @@ bool DiscreteElasticRod::getConstraintHessian(const Opt::VectorX &x_lambda, Opt:
     }
 #endif
 
-
-    print_debug("[getHessian] exit");
+    //print_debug("[getHessian] exit");
 
     return true;
 }
 
 void DiscreteElasticRod::applyConstraints(size_t max_newton_iterations) {
-    print_debug("[applyConstraints] enter");
+    //print_debug("[applyConstraints] enter");
 
     Opt opt;
     opt.optimizer = Opt::Optimizer::NEWTON;
@@ -415,12 +424,12 @@ void DiscreteElasticRod::applyConstraints(size_t max_newton_iterations) {
             return getConstraintHessian(x_lambda, hessian);
         };
 
-    print_debug("Initial positions:");
-    print_debug(m_vertex_positions);
-    print_debug("Initial edge length:");
-    print_debug(VectorX(getEdges().colwise().norm()).transpose());
-    print_debug("Initial edge length / resting edge length:");
-    print_debug((VectorX(getEdges().colwise().norm()).cwiseQuotient(m_edge_length)).transpose());
+    // print_debug("Initial positions:");
+    // print_debug(m_vertex_positions);
+    // print_debug("Initial edge length:");
+    // print_debug(VectorX(getEdges().colwise().norm()).transpose());
+    // print_debug("Initial edge length / resting edge length:");
+    // print_debug((VectorX(getEdges().colwise().norm()).cwiseQuotient(m_edge_length)).transpose());
 
     bool exit = false;
     for (size_t step = 0; step < max_newton_iterations; ++step) {
@@ -448,11 +457,11 @@ void DiscreteElasticRod::applyConstraints(size_t max_newton_iterations) {
         }
     }
 
-    print_debug("Resulting positions:");
-    print_debug(m_vertex_positions);
-    print_debug("Result edge length:");
-    print_debug(VectorX(getEdges().colwise().norm()).transpose());
-    print_debug("Result edge length / resting edge length:");
-    print_debug((VectorX(getEdges().colwise().norm()).cwiseQuotient(m_edge_length)).transpose());
-    print_debug("exit");
+    // print_debug("Resulting positions:");
+    // print_debug(m_vertex_positions);
+    // print_debug("Result edge length:");
+    // print_debug(VectorX(getEdges().colwise().norm()).transpose());
+    // print_debug("Result edge length / resting edge length:");
+    // print_debug((VectorX(getEdges().colwise().norm()).cwiseQuotient(m_edge_length)).transpose());
+    // print_debug("exit");
 }

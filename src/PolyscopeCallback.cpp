@@ -20,6 +20,7 @@
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 #pragma GCC diagnostic ignored "-Wunused-function"
+#include <charconv>
 #include <polyscope/curve_network.h>
 #include <polyscope/polyscope.h>
 #include <polyscope/surface_mesh.h>
@@ -123,11 +124,6 @@ static bool draw_handles = true;
 static float centerline_radius = 0.02;
 
 /**
- * @brief Number of vertices to add.
- */
-static int n_to_add = 9;
-
-/**
  * @brief Maximal number of iterations newton method can run for in one timestep.
  */
 static int max_newton_iterations = 5;
@@ -194,12 +190,39 @@ static void updateRodHandles(int rod_index)
  *
  * TODO: Where to put these helper functions?
  */
-static void initializeRod(int n_vertices, float alpha, float beta)
+static void initializeRod(const InitialConfiguration &config, float alpha, float beta)
 {
     // Add rod
-    rods.emplace_back(n_vertices, alpha, beta);
+    rods.emplace_back(config, alpha, beta);
 
     // Initialize rotation frame
+    rod_thetas.resize(2, rod_thetas.cols() + 1);
+    rod_thetas.col(rod_thetas.cols() - 1).setZero();
+
+    // Add the new handle positions
+    handles.resize(handles.rows() + handles_count, 3);
+    handle_colors.resize(handle_colors.rows() + handles_count, 3);
+
+    // Initialize positions
+    const uint64_t rod_count = rods.size();
+    for (uint64_t rod_index = 0; rod_index < rod_count; ++rod_index)
+    {
+        updateRodHandles(rod_index);
+    }
+
+    // Set the colors
+    handle_colors(Eigen::seq(handles.rows() - handles_count, handles.rows() - 1), Eigen::seq(0, 2)).setZero();
+    // Blue for the endpoints
+    handle_colors(handles.rows() - 6, Eigen::seq(0, 2)) = handle_colors(handles.rows() - 3, Eigen::seq(0, 2)) = Eigen::Vector3f(0.0, 0.0, 1.0).transpose();
+    // Red for the direction
+    handle_colors(handles.rows() - 5, Eigen::seq(0, 2)) = handle_colors(handles.rows() - 2, Eigen::seq(0, 2)) = Eigen::Vector3f(1.0, 0.0, 0.0).transpose();
+    // Green for the orientation
+    handle_colors(handles.rows() - 4, Eigen::seq(0, 2)) = handle_colors(handles.rows() - 1, Eigen::seq(0, 2)) = Eigen::Vector3f(0.0, 1.0, 0.0).transpose();
+}
+
+static void addRod(DiscreteElasticRod rod) {
+    rods.emplace_back(rod);
+
     rod_thetas.resize(2, rod_thetas.cols() + 1);
     rod_thetas.col(rod_thetas.cols() - 1).setZero();
 
@@ -246,7 +269,7 @@ static void applyHandleUpdate(uint64_t handle_index, const Eigen::Vector3f &new_
         // Set position, but preserve length
         rods[rod_index].setVertexPosition(0,
                                           (neighbour_position + (new_position - neighbour_position).normalized() * prev_length)
-                                          .cast<typename DiscreteElasticRod::Float>());
+                                          .cast<Float>());
         updateRodHandles(rod_index);
         break;
     case 3:
@@ -255,7 +278,7 @@ static void applyHandleUpdate(uint64_t handle_index, const Eigen::Vector3f &new_
         // Set position, but preserve length
         rods[rod_index].setVertexPosition(vertex_positions.cols() - 1,
                                           (neighbour_position + (new_position - neighbour_position).normalized() * prev_length)
-                                          .cast<typename DiscreteElasticRod::Float>());
+                                          .cast<Float>());
         updateRodHandles(rod_index);
         break;
     default:
@@ -279,24 +302,16 @@ static void makeConfigWindow()
         ImGui::InputFloat("Time-step", &delta_time, 0.001);
         ImGui::InputFloat("Simulation freeze time", &simulation_freeze_time_s, 0.1);
         ImGui::InputInt("Max number of newton iterations", &max_newton_iterations);
+        ImGui::Checkbox("Run simulation", &is_simulation_running);
 
-        if (rods.size() == 0)
-        {
-            ImGui::InputInt("Vertices n", &n_to_add);
-            ImGui::InputFloat("Alpha", &alpha);
-            ImGui::InputFloat("Beta", &beta);
-            if (ImGui::Button("Create Rod"))
-            {
-                initializeRod(n_to_add, alpha, beta);
-            }
-        }
-        else
+        if (rods.size() > 0)
         {
             uint64_t rods_size = rods.size();
-            for (uint64_t rod_index = 0; rod_index < rods_size; rod_index++)
-            {
-                bool start_changed = ImGui::SliderAngle("Rod start", &rod_thetas(0, rod_index), 0);
-                bool end_changed = ImGui::SliderAngle("Rod end", &rod_thetas(1, rod_index), 0);
+            for (uint64_t rod_index = 0; rod_index < rods_size; rod_index++) {
+                const std::string label_start = "Rod start for rod " + std::to_string(rod_index);
+                const std::string label_end = "Rod end for rod " + std::to_string(rod_index);
+                bool start_changed = ImGui::SliderAngle(label_start.c_str(), &rod_thetas(0, rod_index), 0);
+                bool end_changed = ImGui::SliderAngle(label_end.c_str(), &rod_thetas(1, rod_index), 0);
                 if (start_changed || end_changed)
                 {
                     rods[rod_index].setBoundaryEdgeThetas(rod_thetas(0, rod_index), rod_thetas(1, rod_index));
@@ -304,8 +319,65 @@ static void makeConfigWindow()
                 }
             }
         }
+    }
 
-        ImGui::Checkbox("Run simulation", &is_simulation_running);
+    if (ImGui::CollapsingHeader("Creation settings", ImGuiTreeNodeFlags_DefaultOpen))
+    {
+        if (rods.size() == 0)
+        {
+            static int selected_item = 0;
+            ImGui::Combo("Preset Type", &selected_item, InitialConfiguration::CONFIG_NAMES, InitialConfiguration::CONFIG_COUNT);
+
+            static int n = 9;
+            static float radius = 0.05f;
+            static float initial_distance = 0.9;
+
+            ImGui::InputInt("Vertices n", &n);
+            ImGui::InputFloat("Alpha", &alpha);
+            ImGui::InputFloat("Beta", &beta);
+            ImGui::InputFloat("Radius", &radius);
+
+            switch (selected_item)
+            {
+            case InitialConfiguration::STRAIGHT_ISOTROPIC_AT_REST:
+            case InitialConfiguration::STRAIGHT_ISOTROPIC_PRESSURE:
+                ImGui::InputFloat("Initial Boundary Distance", &initial_distance);
+                initial_distance = std::clamp(initial_distance, 0.f, (n + 1.f) / 10.f);
+                break;
+            default:
+                break;
+            }
+
+            if (ImGui::Button("Create Rod"))
+            {
+                std::unique_ptr<InitialConfiguration> configuration = getInitialConfiguration(static_cast<InitialConfiguration::ConfigType>(selected_item),
+                                                                                              n, radius, initial_distance);
+                initializeRod(*configuration, alpha, beta);
+            }
+        }
+        else
+        {
+            if (ImGui::Button("Delete rod"))
+            {
+                rods.clear();
+            }
+            if (ImGui::Button("Cut In Half")) {
+                std::vector<DiscreteElasticRod> temp;
+                for (size_t i = 0; i < rods.size(); i++) {
+                    if (rods[i].getN() >= 1) {
+                        auto cut_rods = rods[i].cutAtVertex((int) (rods[i].getN() + 2) / 2 );
+                        temp.emplace_back(cut_rods.first);
+                        temp.emplace_back(cut_rods.second);
+                    } else {
+                        temp.emplace_back(rods[i]);
+                    }
+                }
+                rods.clear();
+                for (size_t i = 0; i < temp.size(); i++) {
+                    addRod(temp[i]);
+                }
+            }
+        }
     }
 
     if (ImGui::CollapsingHeader("Visualization settings", ImGuiTreeNodeFlags_DefaultOpen))
@@ -355,6 +427,8 @@ static void makeConfigWindow()
         ImGui::Text("Color u: Red");
         ImGui::Text("Color v: Blue");
     }
+
+
 }
 
 /**

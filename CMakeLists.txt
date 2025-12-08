@@ -9,7 +9,7 @@ include("cmake/AddCompileOption.cmake")
 set(DER_TARGET_NAME "discrete_elastic_rods") # Discrete Elastic Rods = DER
 set(DER_LIBRARY_NAME "rods_library")
 add_executable(${DER_TARGET_NAME})
-add_library(${DER_LIBRARY_NAME})
+add_library(${DER_LIBRARY_NAME} OBJECT)
 
 # set compile features
 target_compile_features(${DER_TARGET_NAME} PUBLIC c_std_23)
