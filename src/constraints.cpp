@@ -18,7 +18,7 @@ bool DiscreteElasticRod::getConstraints(const Opt::VectorX &x_lambda, Opt::Float
     //print_debug("");
 
     VectorX C = VectorX::Zero(m_n + 1);
-    for (int i = 0; i <= m_n; i++) {
+    for (uint64_t i = 0; i <= m_n; i++) {
         //For first constraint formulation
         // $E_s = 1/2 (|x_{i+1} - x_i| - |\bar{e_i}|)^2$
 #ifdef FIRST_METHOD
@@ -151,7 +151,7 @@ bool DiscreteElasticRod::getConstraintGradient(const Opt::VectorX &x_lambda, Opt
 
     // For inextensibility, do not allow vertices 0 and n+1 to move, since they are fixed.
     // TODO: Validate if this sum range is correct
-    for (int i = 1; i <= m_n; i++) {
+    for (uint64_t i = 1; i <= m_n; i++) {
         gradient.segment<3>(3 * i) = maple_gradient(
             x_lambda.segment<3>(3 * (i-1)),
             x_lambda.segment<3>(3 * i),
@@ -342,7 +342,7 @@ bool DiscreteElasticRod::getConstraintHessian(const Opt::VectorX &x_lambda, Opt:
 #endif
 
 
-    for (int i = 1; i <= m_n; i++)
+    for (uint64_t i = 1; i <= m_n; i++)
     {
         Vector3 x_min_1 = x_lambda.segment<3>(3 * (i-1));
         Vector3 x_i = x_lambda.segment<3>(3 * i);

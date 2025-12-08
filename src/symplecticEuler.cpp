@@ -51,9 +51,6 @@ void DiscreteElasticRod::doSymplecticEuler(double delta_time)
     Matrix3X edges = getEdges();
     Matrix3X tangents = getTangents();
 
-    VectorX actual_edge_lengths = edges.colwise().norm();
-    float actual_rod_length = actual_edge_lengths.sum();
-
     // Binormals padded with start and end
     Matrix3X binormals_padded(3, m_n + 2);
     binormals_padded.setZero();
@@ -104,7 +101,7 @@ void DiscreteElasticRod::doSymplecticEuler(double delta_time)
             "DiscreteElasticRod::doSymplecticEuler(double): Not implemented for non-straight or non-isotropic case"));
     }
 
-    for (int i = 0; i <= m_n + 1; i++) {
+    for (uint64_t i = 0; i <= m_n + 1; i++) {
         print_debug("Force on node " + std::to_string(i) + ":");
         print_debug(f.col(i));
     }

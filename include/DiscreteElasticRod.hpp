@@ -142,7 +142,7 @@ public:
      */
     void update(double delta_time, size_t max_newton_iterations);
 
-    inline const uint64_t getN() const { return m_n; }
+    inline uint64_t getN() const { return m_n; }
 
     /**
      * @brief Get the stacked vertex positions.

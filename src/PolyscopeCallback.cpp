@@ -363,7 +363,7 @@ static void makeConfigWindow()
             }
             if (ImGui::Button("Cut In Half")) {
                 std::vector<DiscreteElasticRod> temp;
-                for (int i = 0; i < rods.size(); i++) {
+                for (size_t i = 0; i < rods.size(); i++) {
                     if (rods[i].getN() >= 1) {
                         auto cut_rods = rods[i].cutAtVertex((int) (rods[i].getN() + 2) / 2 );
                         temp.emplace_back(cut_rods.first);
@@ -373,7 +373,7 @@ static void makeConfigWindow()
                     }
                 }
                 rods.clear();
-                for (int i = 0; i < temp.size(); i++) {
+                for (size_t i = 0; i < temp.size(); i++) {
                     addRod(temp[i]);
                 }
             }

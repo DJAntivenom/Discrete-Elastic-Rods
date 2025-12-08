@@ -63,11 +63,11 @@ DiscreteElasticRod::DiscreteElasticRod(Matrix3X &vertex_positions,
                                         Float alpha,
                                         Float beta) :
     m_vertex_positions(vertex_positions),
-    m_edge_length(edge_lengths),
     m_vertex_velocities(vertex_velocities),
     m_bishop_frame_vector(bishop_frame_vector),
     m_bishop_frame(bishop_frame),
     m_edge_theta(edge_theta),
+    m_edge_length(edge_lengths),
     m_vertex_mass(vertex_mass),
     m_l_i(l_i),
     m_n(n),
@@ -344,7 +344,7 @@ Matrix4X DiscreteElasticRod::getMaterialCurvature(const VectorX &theta) const
 }
 
 std::pair<DiscreteElasticRod, DiscreteElasticRod> DiscreteElasticRod::cutAtVertex(int i) {
-    assert(i > 0 && i < m_n + 1);
+    assert(i > 0 && static_cast<uint64_t>(i) < m_n + 1);
     print_debug(m_n + 2);
     print_debug(i);
 
