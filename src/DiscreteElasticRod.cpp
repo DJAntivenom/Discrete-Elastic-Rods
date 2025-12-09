@@ -23,6 +23,7 @@ DiscreteElasticRod::DiscreteElasticRod(const InitialConfiguration &ic,
 {
     for (uint64_t i = 1; i < m_n + 2; ++i)
     {
+        /* because the edges are inextensible, the rod's length can be calculated from the vertices */
         m_edge_length[i - 1] = (m_vertex_positions.col(i) - m_vertex_positions.col(i - 1)).norm();
     }
     m_l_i[0] = m_edge_length[0];
