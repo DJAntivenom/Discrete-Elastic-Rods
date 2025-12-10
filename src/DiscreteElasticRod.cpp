@@ -6,7 +6,7 @@
 #include "common.h"
 
 DiscreteElasticRod::DiscreteElasticRod(const InitialConfiguration &ic,
-                                       Float alpha, Float beta) :
+                                       Float alpha, Float beta, Float total_mass) :
     m_vertex_positions(ic.getInitialPositions()),
     m_vertex_velocities(3, ic.getN() + 2),
     m_bishop_frame_vector{ 0., 0., 1. },
@@ -30,7 +30,7 @@ DiscreteElasticRod::DiscreteElasticRod(const InitialConfiguration &ic,
     m_l_i.segment(1, m_n) = m_edge_length.head(m_n) + m_edge_length.tail(m_n);
     m_l_i[m_n + 1] = m_edge_length[m_n];
 
-    m_vertex_mass.setConstant(1.0f);
+    m_vertex_mass.setConstant(total_mass / (m_n + 2));
 
     m_total_rod_length = m_edge_length.sum();
 

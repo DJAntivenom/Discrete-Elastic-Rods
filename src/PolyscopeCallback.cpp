@@ -329,7 +329,7 @@ static void makeConfigWindow()
             ImGui::Combo("Preset Type", &selected_item, InitialConfiguration::CONFIG_NAMES, InitialConfiguration::CONFIG_COUNT);
 
             static int n = 9;
-            static float radius = 0.05f;
+            static float radius = 0.01f;
             static float initial_distance = 0.9;
 
             ImGui::InputInt("Vertices n", &n);
@@ -342,7 +342,6 @@ static void makeConfigWindow()
             case InitialConfiguration::STRAIGHT_ISOTROPIC_AT_REST:
             case InitialConfiguration::STRAIGHT_ISOTROPIC_PRESSURE:
                 ImGui::InputFloat("Initial Boundary Distance", &initial_distance);
-                initial_distance = std::clamp(initial_distance, 0.f, (n + 1.f) / 10.f);
                 break;
             default:
                 break;

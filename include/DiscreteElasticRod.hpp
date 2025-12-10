@@ -132,7 +132,7 @@ public:
      *  corresponding to the constrained boundary vertices.
      */
     DiscreteElasticRod(const InitialConfiguration &initial_configuration,
-                       Float alpha, Float beta);
+                       Float alpha, Float beta, Float total_mass = 0.1);
 
     virtual ~DiscreteElasticRod() = default;
 
