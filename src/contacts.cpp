@@ -21,7 +21,8 @@ static VectorX minimum_distance(const int i, const int j, const Matrix3X &vertic
     Vector3 p1 = xi + t1 * ei;
     Vector3 p2 = xj + t2 * ej;
 
-    VectorX res = VectorX::Zero(5);
+    VectorX res(5);
+    res.setZero();
     res.head(3) = (p2 - p1);
     res[3] = t1;
     res[4] = t2;
