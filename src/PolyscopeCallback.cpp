@@ -360,6 +360,8 @@ static void makeConfigWindow()
             if (ImGui::Button("Delete rod"))
             {
                 rods.clear();
+                handles.resize(0, 0);
+                handle_colors.resize(0, 0);
             }
             if (ImGui::Button("Cut In Half")) {
                 std::vector<DiscreteElasticRod> temp;
