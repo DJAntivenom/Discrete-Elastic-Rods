@@ -69,26 +69,14 @@ static void calculateContactForces(const int max_iter, const Float d, Matrix3X &
                         n_ij = res.head(3);
                         md_ij = n_ij.norm();
                         err_vec[i * (m_vertices_j.cols() - 1) + j] = d - md_ij;
-                        // err_vec[(i + 1) * m_vertices_j.cols() + j] = d - md_ij;
-                        // err_vec[i * m_vertices_j.cols() + j + 1] = d - md_ij;
-                        // err_vec[(i + 1) * m_vertices_j.cols() + j + 1] = d - md_ij;
                     } else {
-                        // print_debug(res[3]);
-                        // print_debug("md_ij = " + std::to_string(md_ij));
                         err_vec[i * (m_vertices_j.cols() - 1) + j] = 0;
-                        // err_vec[(i + 1) * m_vertices_j.cols() + j] = 0;
-                        // err_vec[i * m_vertices_j.cols() + j + 1] = 0;
-                        // err_vec[(i + 1) * m_vertices_j.cols() + j + 1] = 0;
                     }
                 } else {
                     err_vec[i * (m_vertices_j.cols() - 1) + j] = 0;
-                    // err_vec[(i + 1) * m_vertices_j.cols() + j] = 0;
-                    // err_vec[i * m_vertices_j.cols() + j + 1] = 0;
-                    // err_vec[(i + 1) * m_vertices_j.cols() + j + 1] = 0;
                 }
             }
         }
-        print_debug(err_vec);
         print_debug("After loop" + std::to_string(k) + "The current error is:" + std::to_string(err_vec.squaredNorm()));
 
     }
