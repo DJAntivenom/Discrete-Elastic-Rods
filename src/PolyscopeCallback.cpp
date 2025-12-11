@@ -126,7 +126,7 @@ static float centerline_radius = 0.02;
 /**
  * @brief Maximal number of iterations newton method can run for in one timestep.
  */
-static int max_newton_iterations = 5;
+static int max_newton_iterations = 20;
 
 /**
  * \brief Written to by cout, see teebuffer below.
