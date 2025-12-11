@@ -2,7 +2,7 @@
 #include <common.h>
 #include <stdexcept>
 
-#define USE_GRAVITY
+//#define USE_GRAVITY
 
 /**
  * Curvature binormal derivative by other node, $\nabla_i(kb)_i$, from paper chapter 7.1.

@@ -1,4 +1,5 @@
 #include <DiscreteElasticRod.hpp>
+#include "contacts.cpp"
 
 #include <iostream>
 
@@ -81,10 +82,9 @@ DiscreteElasticRod::DiscreteElasticRod(Matrix3X &vertex_positions,
     m_total_rod_length = m_edge_length.sum();
 }
 
-void DiscreteElasticRod::update(double delta_time, size_t max_newton_iterations)
-{
+void DiscreteElasticRod::update(double delta_time, size_t max_newton_iterations) {
 #ifdef KEEP_TURNING
-    m_edge_theta[m_n] += 10 * M_PI * delta_time;
+    m_edge_theta[m_n] += 2 * M_PI * delta_time;
 #endif
     /* algorithm outline */
 
@@ -100,6 +100,9 @@ void DiscreteElasticRod::update(double delta_time, size_t max_newton_iterations)
     applyConstraints(max_newton_iterations);
     print_debug("post constraints");
     /// 9. TODO: handle collisions (not discussed in detail in paper, but reference in paper)
+
+    calculateContactForces(max_newton_iterations * 2, m_radius, m_vertex_positions, m_vertex_positions, true, m_vertex_velocities, m_vertex_velocities, delta_time);
+    print_debug("post collisions");
 
     /// 10. update natural bishop frame, i.e. apply rotation (P_i in paper)
     transportBishopFrame();
