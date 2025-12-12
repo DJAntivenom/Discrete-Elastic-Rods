@@ -190,10 +190,10 @@ static void updateRodHandles(int rod_index)
  *
  * TODO: Where to put these helper functions?
  */
-static void initializeRod(const InitialConfiguration &config, float alpha, float beta)
+static void initializeRod(const InitialConfiguration &config, float alpha, float beta, float mass)
 {
     // Add rod
-    rods.emplace_back(config, alpha, beta);
+    rods.emplace_back(config, alpha, beta, mass);
 
     // Initialize rotation frame
     rod_thetas.resize(2, rod_thetas.cols() + 1);
@@ -331,11 +331,13 @@ static void makeConfigWindow()
 
             static int n = 9;
             static float radius = 0.01f;
-            static float initial_distance = 0.9;
+            static float initial_distance = 1.f;
+            static float mass = 0.1f;
 
             ImGui::InputInt("Vertices n", &n);
             ImGui::InputFloat("Alpha", &alpha);
             ImGui::InputFloat("Beta", &beta);
+            ImGui::InputFloat("Mass", &mass);
             ImGui::InputFloat("Radius", &radius);
 
             switch (selected_item)
@@ -352,7 +354,7 @@ static void makeConfigWindow()
             {
                 std::unique_ptr<InitialConfiguration> configuration = getInitialConfiguration(static_cast<InitialConfiguration::ConfigType>(selected_item),
                                                                                               n, radius, initial_distance);
-                initializeRod(*configuration, alpha, beta);
+                initializeRod(*configuration, alpha, beta, mass);
             }
         }
         else
