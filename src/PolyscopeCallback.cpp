@@ -45,10 +45,10 @@
 static std::vector<DiscreteElasticRod> rods;
 
 /**
- * \brief The start and end thetas configured in the UI.
+ * \brief The speed of rotation and end theta configured in the UI.
  *
  * Dimension 2 x rods.size(). The n-th column has the
- * start and end theta for the n-th rod.
+ * speed of and end theta for the n-th rod.
  */
 static Eigen::Matrix2Xf rod_thetas;
 
@@ -196,7 +196,7 @@ static void initializeRod(const InitialConfiguration &config, float alpha, float
     rods.emplace_back(config, alpha, beta, mass);
 
     // Initialize rotation frame
-    rod_thetas.resize(2, rod_thetas.cols() + 1);
+    rod_thetas.conservativeResize(2, rod_thetas.cols() + 1);
     rod_thetas.col(rod_thetas.cols() - 1).setZero();
 
     // Add the new handle positions
@@ -223,12 +223,12 @@ static void initializeRod(const InitialConfiguration &config, float alpha, float
 static void addRod(DiscreteElasticRod rod) {
     rods.emplace_back(rod);
 
-    rod_thetas.resize(2, rod_thetas.cols() + 1);
+    rod_thetas.conservativeResize(2, rod_thetas.cols() + 1);
     rod_thetas.col(rod_thetas.cols() - 1).setZero();
 
     // Add the new handle positions
-    handles.resize(handles.rows() + handles_count, 3);
-    handle_colors.resize(handle_colors.rows() + handles_count, 3);
+    handles.conservativeResize(handles.rows() + handles_count, 3);
+    handle_colors.conservativeResize(handle_colors.rows() + handles_count, 3);
 
     // Initialize positions
     const uint64_t rod_count = rods.size();
@@ -304,20 +304,45 @@ static void makeConfigWindow()
         ImGui::InputInt("Max number of newton iterations", &max_newton_iterations);
         ImGui::Checkbox("Run simulation", &is_simulation_running);
 
+        static std::vector<bool> is_turning;
         if (rods.size() > 0)
         {
+            is_turning.resize(rods.size());
             uint64_t rods_size = rods.size();
             for (uint64_t rod_index = 0; rod_index < rods_size; rod_index++)
             {
-                const std::string label_start = "Rod start for rod " + std::to_string(rod_index);
-                const std::string label_end = "Rod end for rod " + std::to_string(rod_index);
-                bool start_changed = ImGui::SliderAngle(label_start.c_str(), &rod_thetas(0, rod_index), 0);
-                bool end_changed = ImGui::SliderAngle(label_end.c_str(), &rod_thetas(1, rod_index), 0);
-                if (start_changed || end_changed)
                 {
-                    rods[rod_index].setBoundaryEdgeThetas(rod_thetas(0, rod_index), rod_thetas(1, rod_index));
-                    updateRodHandles(rod_index);
+                    bool b = is_turning[rod_index];
+                    const std::string label_rot = "Constant rotation for rod " + std::to_string(rod_index);
+                    ImGui::Checkbox(label_rot.c_str(), &b);
+                    is_turning[rod_index] = b;
                 }
+
+                if (is_turning[rod_index])
+                {
+                    const std::string label_rot = "Degrees per second for rod " + std::to_string(rod_index);
+                    if (ImGui::InputFloat(label_rot.c_str(), &rod_thetas(0, rod_index)))
+                    {
+                        rods[rod_index].setConstantRotation(rod_thetas(0, rod_index));
+                    }
+                    const auto edges = rods[rod_index].getEdgeThetas();
+                    rod_thetas(1, rod_index) = edges[edges.rows() - 1];
+                }
+                else
+                {
+                    rods[rod_index].setConstantRotation(0);
+                    rod_thetas(0, rod_index) = 0;
+                }
+
+                const std::string label_end = "Rod end for rod " + std::to_string(rod_index);
+                bool end_changed = ImGui::SliderAngle(label_end.c_str(), &rod_thetas(1, rod_index), 0);
+                if (end_changed)
+                {
+                    rods[rod_index].setBoundaryEdgeTheta(rod_thetas(1, rod_index));
+                }
+
+                if (end_changed || is_turning[rod_index])
+                    updateRodHandles(rod_index);
             }
         }
     }
@@ -640,17 +665,16 @@ void polyscopeCallback()
     if (is_simulation_running)
     {
         bool run_simulation = true;
+        // Get the number of ticks for the system clock
+        const auto test1 = std::chrono::system_clock::from_time_t(0);
+        const auto test2 = std::chrono::system_clock::from_time_t(1);
+        const double one_second = std::chrono::duration<double>(test2 - test1).count();
 
+        const auto now = std::chrono::system_clock::now();
+        const std::chrono::duration<double> elapsed = now - last_simulation_time;
         // Check if we need to skip the update for the slow-mo mode
         if (simulation_freeze_time_s > 0.0f)
         {
-            // Get the number of ticks for the system clock
-            const auto test1 = std::chrono::system_clock::from_time_t(0);
-            const auto test2 = std::chrono::system_clock::from_time_t(1);
-            const uint64_t one_second = (test2 - test1).count();
-
-            const auto now = std::chrono::system_clock::now();
-            const auto elapsed = now - last_simulation_time;
             if (elapsed.count() < simulation_freeze_time_s * one_second)
             {
                 // Do not run simulation
@@ -659,7 +683,6 @@ void polyscopeCallback()
             else
             {
                 // Update last run time and do not exit
-                last_simulation_time = std::chrono::system_clock::now();
             }
         }
 
@@ -667,8 +690,9 @@ void polyscopeCallback()
         {
             for (auto &rod : rods)
             {
-                rod.update(delta_time, static_cast<size_t>(max_newton_iterations));
+                rod.update(delta_time, elapsed.count(), static_cast<size_t>(max_newton_iterations));
             }
+            last_simulation_time = std::chrono::system_clock::now();
         }
     }
 }

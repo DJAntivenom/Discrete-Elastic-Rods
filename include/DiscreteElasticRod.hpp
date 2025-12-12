@@ -106,6 +106,11 @@ private:
     const float m_radius;
 
     /**
+     * How fast the end rotates constantly in degree/s.
+     */
+    Float m_rotation_speed;
+
+    /**
      * @brief Set when positions of vertices are randomized or moved.
      */
     bool m_is_straight_isotropic;
@@ -145,7 +150,7 @@ public:
      * \brief Performs one timestep of the simulation.
      * \param delta_time The number of seconds that have passed since the last update.
      */
-    void update(double delta_time, size_t max_newton_iterations);
+    void update(double time_step, double delta_time, size_t max_newton_iterations);
 
     inline uint64_t getN() const { return m_n; }
 
@@ -180,10 +185,14 @@ public:
     /**
     * @brief Set the edge angle boundary conditions.
     */
-    inline void setBoundaryEdgeThetas(Float theta_start, Float theta_end)
+    inline void setBoundaryEdgeTheta(Float theta_end)
     {
-        m_edge_theta[0] = theta_start;
         m_edge_theta[m_edge_theta.size() - 1] = theta_end;
+    }
+
+    inline void setConstantRotation(Float rotation)
+    {
+        m_rotation_speed = rotation;
     }
 
     /**
