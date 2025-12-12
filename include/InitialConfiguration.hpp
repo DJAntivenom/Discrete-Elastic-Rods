@@ -14,8 +14,8 @@ public:
      */
     enum ConfigType
     {
-        STRAIGHT_ISOTROPIC_AT_REST,
-        STRAIGHT_ISOTROPIC_PRESSURE,
+        STRAIGHT_ISOTROPIC_AT_REST,  //< A straight isotropic rod that is unperturbed.
+        STRAIGHT_ISOTROPIC_PRESSURE, //< A straight isotropic rod that is pushed together to form a half-circle.
         STRAIGHT_ISOTROPIC_TREFOIL,
         CURVED_ISOTROPIC,
         UNKNOWN,
@@ -121,12 +121,12 @@ protected:
  * @param n The number of inner vertices.
  * @param radius The radius of the rod.
  * @param length_between_boundaries Used by some implementations as the initial distance
- * of the boundary-vertices. Must be in (0,1].
+ * of the boundary-vertices. Must be greater than 0.
  * @return A unique pointer to the created initial configuration.
  */
 std::unique_ptr<InitialConfiguration> getInitialConfiguration(InitialConfiguration::ConfigType type,
                                                               uint64_t n,
                                                               float radius,
-                                                              Float length_between_boundaries = 0.9f);
+                                                              Float length_between_boundaries = 1.);
 
 #endif
