@@ -307,7 +307,8 @@ static void makeConfigWindow()
         if (rods.size() > 0)
         {
             uint64_t rods_size = rods.size();
-            for (uint64_t rod_index = 0; rod_index < rods_size; rod_index++) {
+            for (uint64_t rod_index = 0; rod_index < rods_size; rod_index++)
+            {
                 const std::string label_start = "Rod start for rod " + std::to_string(rod_index);
                 const std::string label_end = "Rod end for rod " + std::to_string(rod_index);
                 bool start_changed = ImGui::SliderAngle(label_start.c_str(), &rod_thetas(0, rod_index), 0);
@@ -362,19 +363,25 @@ static void makeConfigWindow()
                 handles.resize(0, 0);
                 handle_colors.resize(0, 0);
             }
-            if (ImGui::Button("Cut In Half")) {
+            if (ImGui::Button("Cut In Half"))
+            {
                 std::vector<DiscreteElasticRod> temp;
-                for (size_t i = 0; i < rods.size(); i++) {
-                    if (rods[i].getN() >= 1) {
-                        auto cut_rods = rods[i].cutAtVertex((int) (rods[i].getN() + 2) / 2 );
+                for (size_t i = 0; i < rods.size(); i++)
+                {
+                    if (rods[i].getN() >= 1)
+                    {
+                        auto cut_rods = rods[i].cutAtVertex((int)(rods[i].getN() + 2) / 2);
                         temp.emplace_back(cut_rods.first);
                         temp.emplace_back(cut_rods.second);
-                    } else {
+                    }
+                    else
+                    {
                         temp.emplace_back(rods[i]);
                     }
                 }
                 rods.clear();
-                for (size_t i = 0; i < temp.size(); i++) {
+                for (size_t i = 0; i < temp.size(); i++)
+                {
                     addRod(temp[i]);
                 }
             }
