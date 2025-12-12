@@ -17,6 +17,7 @@ DiscreteElasticRod::DiscreteElasticRod(const InitialConfiguration &ic,
     m_l_i(ic.getN() + 2),
     m_n(ic.getN()),
     m_radius(ic.getRadius()),
+    m_rotation_speed(0),
     m_is_straight_isotropic(ic.isStraight() && ic.isIsotropic()),
     m_alpha(alpha),
     m_beta(beta)
@@ -74,6 +75,7 @@ DiscreteElasticRod::DiscreteElasticRod(Matrix3X &vertex_positions,
     m_l_i(l_i),
     m_n(n),
     m_radius(radius),
+    m_rotation_speed(0),
     m_is_straight_isotropic(is_straight_isotropic),
     m_alpha(alpha),
     m_beta(beta),
@@ -83,10 +85,10 @@ DiscreteElasticRod::DiscreteElasticRod(Matrix3X &vertex_positions,
     m_total_rod_length = m_edge_length.sum();
 }
 
-void DiscreteElasticRod::update(double delta_time, size_t max_newton_iterations) {
-#ifdef KEEP_TURNING
-    m_edge_theta[m_n] += 2 * M_PI * delta_time;
-#endif
+void DiscreteElasticRod::update(double time_step, double delta_time, size_t max_newton_iterations)
+{
+    m_edge_theta[m_edge_theta.rows() - 1] += m_rotation_speed * delta_time * M_PI / 180;
+
     /* algorithm outline */
 
     /// 4., 5. apply torque and integrate rigid body
@@ -95,7 +97,7 @@ void DiscreteElasticRod::update(double delta_time, size_t max_newton_iterations)
     /// 6., 7. compute forces (given in forumla 11 and above (sec. 7.1))
     /// integrate centerline => apply symplectic euler, see ex.1 handout for formula
     /// initial velocity is zero
-    doSymplecticEuler(delta_time);
+    doSymplecticEuler(time_step);
 
     /// 8. enforce constraints to guarantee inextensibility
     applyConstraints(max_newton_iterations);
