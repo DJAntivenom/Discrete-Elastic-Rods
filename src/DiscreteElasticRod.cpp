@@ -43,6 +43,9 @@ DiscreteElasticRod::DiscreteElasticRod(const InitialConfiguration &ic,
 
     m_w_overbar = ic.getRestOmega();
 
+    m_x0_target = m_vertex_positions.col(0);
+    m_xnp1_target = m_vertex_positions.col(m_n + 1);
+
     transportBishopFrame();
 }
 
@@ -50,20 +53,20 @@ DiscreteElasticRod::DiscreteElasticRod(const InitialConfiguration &ic,
  * !ONLY TO BE USED FOR THE CUTTING METHOD DISCRETEELASTICROD::CUTATVERTEX!
  */
 DiscreteElasticRod::DiscreteElasticRod(Matrix3X &vertex_positions,
-                                        VectorX &edge_lengths,
-                                        Matrix3X &vertex_velocities,
-                                        Vector3 &bishop_frame_vector,
-                                        Matrix3X &bishop_frame,
-                                        VectorX &edge_theta,
-                                        VectorX &vertex_mass,
-                                        VectorX &l_i,
-                                        Matrix2 &B_matrix,
-                                        Matrix4X &w_overbar,
-                                        int n,
-                                        Float radius,
-                                        bool is_straight_isotropic,
-                                        Float alpha,
-                                        Float beta) :
+                                       VectorX &edge_lengths,
+                                       Matrix3X &vertex_velocities,
+                                       Vector3 &bishop_frame_vector,
+                                       Matrix3X &bishop_frame,
+                                       VectorX &edge_theta,
+                                       VectorX &vertex_mass,
+                                       VectorX &l_i,
+                                       Matrix2 &B_matrix,
+                                       Matrix4X &w_overbar,
+                                       int n,
+                                       Float radius,
+                                       bool is_straight_isotropic,
+                                       Float alpha,
+                                       Float beta) :
     m_vertex_positions(vertex_positions),
     m_vertex_velocities(vertex_velocities),
     m_bishop_frame_vector(bishop_frame_vector),
@@ -81,6 +84,9 @@ DiscreteElasticRod::DiscreteElasticRod(Matrix3X &vertex_positions,
     m_w_overbar(w_overbar)
 {
     m_total_rod_length = m_edge_length.sum();
+
+    m_x0_target = m_vertex_positions.col(0);
+    m_xnp1_target = m_vertex_positions.col(m_n + 1);
 }
 
 void DiscreteElasticRod::update(double delta_time, size_t max_newton_iterations) {
@@ -98,7 +104,7 @@ void DiscreteElasticRod::update(double delta_time, size_t max_newton_iterations)
     doSymplecticEuler(delta_time);
 
     /// 8. TODO: enforce constraints to guarantee inextensibility
-    applyConstraints(max_newton_iterations);
+    applyConstraints(max_newton_iterations, delta_time);
     print_debug("post constraints");
     /// 9. TODO: handle collisions (not discussed in detail in paper, but reference in paper)
 
@@ -121,6 +127,9 @@ void DiscreteElasticRod::setVertexPosition(uint64_t vertex_index, const Vector3 
 {
     m_vertex_positions.col(vertex_index) = new_position;
 
+    m_x0_target = m_vertex_positions.col(0);
+    m_xnp1_target = m_vertex_positions.col(m_n + 1);
+
     transportBishopFrame();
 }
 
@@ -139,6 +148,9 @@ void DiscreteElasticRod::randomizeVertexPositions()
     m_vertex_velocities.setZero(); //starting at rest
 
     m_is_straight_isotropic = false;
+
+    m_x0_target = m_vertex_positions.col(0);
+    m_xnp1_target = m_vertex_positions.col(m_n + 1);
     transportBishopFrame();
 }
 
@@ -399,16 +411,16 @@ std::pair<DiscreteElasticRod, DiscreteElasticRod> DiscreteElasticRod::cutAtVerte
     print_debug(n_2);
 
     DiscreteElasticRod discrete_elastic_rod_1(vertex_positions_1,
-        edge_lengths_1, vertex_positions_1, bishop_frame_vector_1,
-        bishop_frame_1, edge_theta_1, vertex_mass_1,
-        l_i_1, m_B_matrix, w_overbar_1, n_1,
-        m_radius, m_is_straight_isotropic, m_alpha, m_beta) ;
+                                              edge_lengths_1, vertex_positions_1, bishop_frame_vector_1,
+                                              bishop_frame_1, edge_theta_1, vertex_mass_1,
+                                              l_i_1, m_B_matrix, w_overbar_1, n_1,
+                                              m_radius, m_is_straight_isotropic, m_alpha, m_beta);
 
     DiscreteElasticRod discrete_elastic_rod_2(vertex_positions_2,
-        edge_lengths_2, vertex_positions_2, bishop_frame_vector_2,
-        bishop_frame_2, edge_theta_2, vertex_mass_2,
-        l_i_2, m_B_matrix, w_overbar_2, n_2,
-        m_radius, m_is_straight_isotropic, m_alpha, m_beta);
+                                              edge_lengths_2, vertex_positions_2, bishop_frame_vector_2,
+                                              bishop_frame_2, edge_theta_2, vertex_mass_2,
+                                              l_i_2, m_B_matrix, w_overbar_2, n_2,
+                                              m_radius, m_is_straight_isotropic, m_alpha, m_beta);
 
     //TODO: Test that no data is duplicated (except for the final vertex) or lost this way
     //TODO: how to delete this rod after creating the other two, and make sure that these new ones are animated?

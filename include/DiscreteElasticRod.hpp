@@ -20,20 +20,20 @@ public:
 
 private:
     DiscreteElasticRod(Matrix3X &vertex_positions,
-                                        VectorX &edge_lengths,
-                                        Matrix3X &vertex_velocities,
-                                        Vector3 &bishop_frame_vector,
-                                        Matrix3X &bishop_frame,
-                                        VectorX &edge_theta,
-                                        VectorX &vertex_mass,
-                                        VectorX &l_i,
-                                        Matrix2 &B_matrix,
-                                        Matrix4X &w_overbar,
-                                        int n,
-                                        Float radius,
-                                        bool is_straight_isotropic,
-                                        Float alpha,
-                                        Float beta);
+                       VectorX &edge_lengths,
+                       Matrix3X &vertex_velocities,
+                       Vector3 &bishop_frame_vector,
+                       Matrix3X &bishop_frame,
+                       VectorX &edge_theta,
+                       VectorX &vertex_mass,
+                       VectorX &l_i,
+                       Matrix2 &B_matrix,
+                       Matrix4X &w_overbar,
+                       int n,
+                       Float radius,
+                       bool is_straight_isotropic,
+                       Float alpha,
+                       Float beta);
     /**
      * \brief Matrix of vertex positionts, 3x(n+2)
      *
@@ -124,6 +124,11 @@ private:
      * @brief \overbar{\omega} from the paper.
      */
     Matrix4X m_w_overbar;
+
+    /**
+     * @brief Target positions for first and last vertex.
+     */
+    Vector3 m_x0_target, m_xnp1_target;
 
 public:
     /**
@@ -297,12 +302,7 @@ private:
 
     void applyTwist(size_t max_newton_iterations);
 
-    void applyConstraints(size_t max_newton_iterations);
-
-    bool getConstraints(const Opt::VectorX &q_r_x, Opt::Float &energy) const;
-    bool getConstraintGradient(const Opt::VectorX &q_r_x, Opt::VectorX &gradient) const;
-    bool getConstraintHessian(const Opt::VectorX &q_r_x, Opt::TripletList &hessian) const;
-
+    void applyConstraints(size_t max_newton_iterations, double delta_time);
 };
 
 #endif

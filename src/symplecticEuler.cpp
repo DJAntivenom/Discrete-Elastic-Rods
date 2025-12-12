@@ -2,7 +2,7 @@
 #include <common.h>
 #include <stdexcept>
 
-//#define USE_GRAVITY
+#define USE_GRAVITY
 
 /**
  * Curvature binormal derivative by other node, $\nabla_i(kb)_i$, from paper chapter 7.1.
@@ -18,7 +18,7 @@ static std::vector<Matrix3> nabla_curvature_binormal(
     const Vector3 e_i_min_1 = edges.col(i);
     const Vector3 kb_i = binormals_padded.col(i);
 
-    Float denominator = rest_edge_lengths[i-1] * rest_edge_lengths[i] + e_i_min_1.dot(e_i);
+    Float denominator = rest_edge_lengths[i - 1] * rest_edge_lengths[i] + e_i_min_1.dot(e_i);
 
     Matrix3 skew_e_i;
     skew_e_i << 0, -e_i[2], e_i[1],
@@ -44,6 +44,10 @@ void DiscreteElasticRod::doSymplecticEuler(double delta_time)
     // Calculate forces only at the `n` inner vertices
     Matrix3X f(3, m_n + 2);
     f.setZero();
+    // Gravity, pulling down
+#ifdef USE_GRAVITY
+    f.row(1) = m_vertex_mass * -9.81;
+#endif
 
     Float start_to_end_theta = m_edge_theta[m_edge_theta.size() - 1] - m_edge_theta[0];
 
@@ -85,13 +89,6 @@ void DiscreteElasticRod::doSymplecticEuler(double delta_time)
                 Vector3 force_angle = m_beta * start_to_end_theta / m_total_rod_length * nabla_psi[j_nabla];
                 f.col(j) += force_angle; // TODO: Is j or i correct?
             }
-
-            // Gravity, pulling down
-#ifdef USE_GRAVITY
-            f(1, i) += m_vertex_mass[i] * -9.81f;
-#endif
-
-
         }
     }
     else
@@ -101,16 +98,17 @@ void DiscreteElasticRod::doSymplecticEuler(double delta_time)
             "DiscreteElasticRod::doSymplecticEuler(double): Not implemented for non-straight or non-isotropic case"));
     }
 
-    for (uint64_t i = 0; i <= m_n + 1; i++) {
+    for (uint64_t i = 0; i <= m_n + 1; i++)
+    {
         print_debug("Force on node " + std::to_string(i) + ":");
         print_debug(f.col(i));
     }
 
     // --- Apply symplectic euler update
-    for (uint64_t i = 0; i <= m_n+1; i++)
+    for (uint64_t i = 0; i <= m_n + 1; i++)
     {
         m_vertex_velocities.col(i) += delta_time * f.col(i) / m_vertex_mass[i];
-        m_vertex_positions.col(i) += m_vertex_velocities.col(i) * delta_time;
+        /* positions are updated after constraints are enforced */
     }
 
     print_debug("exit");
