@@ -1,5 +1,5 @@
 #include <DiscreteElasticRod.hpp>
-#include "contacts.cpp"
+//#include "contacts.cpp"
 
 #include <iostream>
 
@@ -97,13 +97,47 @@ void DiscreteElasticRod::update(double delta_time, size_t max_newton_iterations)
     /// initial velocity is zero
     doSymplecticEuler(delta_time);
 
-    /// 8. TODO: enforce constraints to guarantee inextensibility
+    /// 8. enforce constraints to guarantee inextensibility
     applyConstraints(max_newton_iterations);
     print_debug("post constraints");
-    /// 9. TODO: handle collisions (not discussed in detail in paper, but reference in paper)
+    /// 9. handle collisions (not discussed in detail in paper, but reference in paper)
 
-    calculateContactForces(max_newton_iterations * 2, m_radius, m_vertex_positions, m_vertex_positions, true, m_vertex_velocities, m_vertex_velocities, delta_time);
+    //calculateContactForces(max_newton_iterations * 2, m_radius, m_vertex_positions, m_vertex_positions, true, m_vertex_velocities, m_vertex_velocities, delta_time);
+
     print_debug("post collisions");
+
+    /// 10. update natural bishop frame, i.e. apply rotation (P_i in paper)
+    transportBishopFrame();
+    print_debug("post transporting bishop frame");
+    print_debug(m_vertex_positions);
+
+    /// 11. quasistatic material frame update (Newton according to equation 4 in paper)
+    /// => Use newton solver from exercises
+    applyTwist(max_newton_iterations);
+    print_debug("post-twist");
+    print_debug(m_vertex_positions);
+}
+
+void DiscreteElasticRod::preCollisionUpdate(double delta_time, size_t max_newton_iterations) {
+#ifdef KEEP_TURNING
+    m_edge_theta[m_n] += 10 * M_PI * delta_time;
+#endif
+    /* algorithm outline */
+
+    /// 4., 5. apply torque and integrate rigid body
+    /// is handled by just setting the handle to some position
+
+    /// 6., 7. compute forces (given in forumla 11 and above (sec. 7.1))
+    /// integrate centerline => apply symplectic euler, see ex.1 handout for formula
+    /// initial velocity is zero
+    doSymplecticEuler(delta_time);
+
+    /// 8. enforce constraints to guarantee inextensibility
+    applyConstraints(max_newton_iterations);
+    print_debug("post constraints");
+}
+
+void DiscreteElasticRod::postCollisionUpdate(double delta_time, size_t max_newton_iterations) {
 
     /// 10. update natural bishop frame, i.e. apply rotation (P_i in paper)
     transportBishopFrame();
@@ -409,8 +443,6 @@ std::pair<DiscreteElasticRod, DiscreteElasticRod> DiscreteElasticRod::cutAtVerte
         bishop_frame_2, edge_theta_2, vertex_mass_2,
         l_i_2, m_B_matrix, w_overbar_2, n_2,
         m_radius, m_is_straight_isotropic, m_alpha, m_beta);
-
-    //TODO: Test that no data is duplicated (except for the final vertex) or lost this way
-    //TODO: how to delete this rod after creating the other two, and make sure that these new ones are animated?
+    
     return std::make_pair(discrete_elastic_rod_1, discrete_elastic_rod_2);
 }

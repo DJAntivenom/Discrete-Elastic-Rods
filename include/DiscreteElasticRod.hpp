@@ -142,6 +142,16 @@ public:
      */
     void update(double delta_time, size_t max_newton_iterations);
 
+    /*
+     * \brief the following two methods split the simulation time_step in half, before and after the time_step respectively.
+     */
+
+    void preCollisionUpdate(double delta_time, size_t max_newton_iterations);
+
+    void calculateContactForces(const int max_iter, const Float d, DiscreteElasticRod &other, const bool same, const Float delta_time);
+
+    void postCollisionUpdate(double delta_time, size_t max_newton_iterations);
+
     inline uint64_t getN() const { return m_n; }
 
     /**
@@ -204,6 +214,8 @@ public:
     {
         return getEdges().colwise().normalized();
     }
+
+    inline Float getRadius() const { return m_radius; }
 
     /**
      * @brief Get kappa_i from the paper, i.e. discrete curvature at vertices.

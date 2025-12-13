@@ -30,20 +30,21 @@ static VectorX minimum_distance(const int i, const int j, const Matrix3X &vertic
     return res;
 }
 
-static void calculateContactForces(const int max_iter, const Float d, Matrix3X &m_vertices_i, Matrix3X &m_vertices_j, const bool same, Matrix3X &m_velocities_i, Matrix3X &m_velocities_j, const Float delta_time) {
+void DiscreteElasticRod::calculateContactForces(const int max_iter, const Float d, DiscreteElasticRod &other, const bool same, const Float delta_time) {
     Float err_tol = 1e-8;
-    VectorX err_vec = VectorX::Constant((m_vertices_i.cols() - 1) * (m_velocities_j.cols() - 1), 1.f);
+
+    VectorX err_vec = VectorX::Constant((m_vertex_positions.cols() - 1) * (other.m_vertex_velocities.cols() - 1), 1.f);
     for (int k = 0; k < max_iter && err_vec.cwiseGreaterOrEqual(err_tol).any(); ++k) {
-        for (int i = 0; i < m_vertices_i.cols() - 1; i++) {
-            for (int j = 0; j < m_vertices_j.cols() - 1; j++) {
-                if(err_vec[i * (m_vertices_j.cols() - 1) + j] > 0 && (!same || abs(i - j) > 2)) {
-                    auto res = minimum_distance(i, j, m_vertices_i, m_vertices_j);
+        for (int i = 0; i < m_vertex_positions.cols() - 1; i++) {
+            for (int j = 0; j < other.m_vertex_positions.cols() - 1; j++) {
+                if(err_vec[i * (other.m_vertex_positions.cols() - 1) + j] > 0 && (!same || abs(i - j) > 2)) {
+                    auto res = minimum_distance(i, j, m_vertex_positions, other.m_vertex_positions);
                     Vector3 n_ij = res.head(3);
                     Float md_ij = n_ij.norm();
                     if (res[3] != -1 && md_ij < d) {
                         print_debug(res[3]);
                         print_debug("md_ij = " + std::to_string(md_ij));
-                        //VectorX res = minimum_distance(i, j, m_vertices_i, m_vertices_j);
+                        //VectorX res = minimum_distance(i, j, m_vertex_positions, other.m_vertex_positions);
                         print_debug(std::to_string(i) + " and " + std::to_string(j) + " are too close to each other because the distance is " + std::to_string(md_ij));
                         Vector3 delta_ri = n_ij * 0.5 * (md_ij - d) * res[3];
                         print_debug(delta_ri);
@@ -54,27 +55,27 @@ static void calculateContactForces(const int max_iter, const Float d, Matrix3X &
                         Vector3 delta_rj_plus = n_ij * 0.5 * (d - md_ij) * (1 -  res[4]);
                         print_debug(delta_rj_plus);
 
-                        m_velocities_i.col(i) += delta_ri / delta_time;
-                        m_vertices_i.col(i) += delta_ri;
+                        m_vertex_velocities.col(i) += delta_ri / delta_time;
+                        m_vertex_positions.col(i) += delta_ri;
 
-                        m_velocities_i.col(i+1) += delta_ri_plus / delta_time;
-                        m_vertices_i.col(i+1) += delta_ri_plus;
+                        m_vertex_velocities.col(i+1) += delta_ri_plus / delta_time;
+                        m_vertex_positions.col(i+1) += delta_ri_plus;
 
-                        m_velocities_j.col(j) += delta_rj / delta_time;
-                        m_vertices_j.col(j) += delta_rj;
+                        other.m_vertex_velocities.col(j) += delta_rj / delta_time;
+                        other.m_vertex_positions.col(j) += delta_rj;
 
-                        m_velocities_j.col(j+1) += delta_rj_plus / delta_time;
-                        m_vertices_j.col(j+1) += delta_rj_plus;
+                        other.m_vertex_velocities.col(j+1) += delta_rj_plus / delta_time;
+                        other.m_vertex_positions.col(j+1) += delta_rj_plus;
 
-                        res = minimum_distance(i, j, m_vertices_i, m_vertices_j);
+                        res = minimum_distance(i, j, m_vertex_positions, other.m_vertex_positions);
                         n_ij = res.head(3);
                         md_ij = n_ij.norm();
-                        err_vec[i * (m_vertices_j.cols() - 1) + j] = d - md_ij;
+                        err_vec[i * (other.m_vertex_positions.cols() - 1) + j] = d - md_ij;
                     } else {
-                        err_vec[i * (m_vertices_j.cols() - 1) + j] = 0;
+                        err_vec[i * (other.m_vertex_positions.cols() - 1) + j] = 0;
                     }
                 } else {
-                    err_vec[i * (m_vertices_j.cols() - 1) + j] = 0;
+                    err_vec[i * (other.m_vertex_positions.cols() - 1) + j] = 0;
                 }
             }
         }

@@ -332,7 +332,7 @@ static void makeConfigWindow()
             static int n = 9;
             static float radius = 0.01f;
             static float initial_distance = 1.f;
-            static float mass = 0.1f;
+            static float mass = 1.0f;
 
             ImGui::InputInt("Vertices n", &n);
             ImGui::InputFloat("Alpha", &alpha);
@@ -665,9 +665,28 @@ void polyscopeCallback()
 
         if (run_simulation)
         {
-            for (auto &rod : rods)
-            {
-                rod.update(delta_time, static_cast<size_t>(max_newton_iterations));
+            // int i = 0;
+            // for (auto &rod : rods)
+            // {
+            //     print_debug(i++);
+            //     rod.preCollisionUpdate(delta_time, static_cast<size_t>(max_newton_iterations));
+            // }
+            // for (int i = 0; i < rods.size(); ++i) {
+            //     for (int j = i; j < rods.size(); ++j) {
+            //         rods[i].calculateContactForces(max_newton_iterations * 2, rods[i].getRadius(), rods[j], i == j, delta_time);
+            //     }
+            // }
+            // for (auto &rod : rods)
+            // {
+            //     rod.postCollisionUpdate(delta_time, static_cast<size_t>(max_newton_iterations));
+            // }
+
+            for (int i = 0; i < rods.size(); ++i) {
+                rods[i].preCollisionUpdate(delta_time, static_cast<size_t>(max_newton_iterations));
+                for (int j = i; j < rods.size(); ++j) {
+                    rods[i].calculateContactForces(max_newton_iterations * 2, rods[i].getRadius(), rods[j], i == j, delta_time);
+                }
+                rods[i].postCollisionUpdate(delta_time, static_cast<size_t>(max_newton_iterations));
             }
         }
     }
