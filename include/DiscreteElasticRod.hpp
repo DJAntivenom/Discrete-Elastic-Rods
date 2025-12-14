@@ -148,7 +148,7 @@ public:
 
     void preCollisionUpdate(double delta_time, size_t max_newton_iterations);
 
-    void calculateContactForces(const int max_iter, const Float d, DiscreteElasticRod &other, const bool same, const Float delta_time);
+    void calculateContactForces(const int max_iter, DiscreteElasticRod &other, const bool same, const Float delta_time);
 
     void postCollisionUpdate(double delta_time, size_t max_newton_iterations);
 

@@ -684,7 +684,7 @@ void polyscopeCallback()
             for (int i = 0; i < rods.size(); ++i) {
                 rods[i].preCollisionUpdate(delta_time, static_cast<size_t>(max_newton_iterations));
                 for (int j = i; j < rods.size(); ++j) {
-                    rods[i].calculateContactForces(max_newton_iterations * 2, rods[i].getRadius(), rods[j], i == j, delta_time);
+                    rods[i].calculateContactForces(max_newton_iterations * 2, rods[j], i == j, delta_time);
                 }
                 rods[i].postCollisionUpdate(delta_time, static_cast<size_t>(max_newton_iterations));
             }

@@ -30,14 +30,15 @@ static VectorX minimum_distance(const int i, const int j, const Matrix3X &vertic
     return res;
 }
 
-void DiscreteElasticRod::calculateContactForces(const int max_iter, const Float d, DiscreteElasticRod &other, const bool same, const Float delta_time) {
+void DiscreteElasticRod::calculateContactForces(const int max_iter, DiscreteElasticRod &other, const bool same, const Float delta_time) {
     Float err_tol = 1e-8;
+    const Float d = m_radius + other.m_radius;
 
     VectorX err_vec = VectorX::Constant((m_vertex_positions.cols() - 1) * (other.m_vertex_velocities.cols() - 1), 1.f);
     for (int k = 0; k < max_iter && err_vec.cwiseGreaterOrEqual(err_tol).any(); ++k) {
         for (int i = 0; i < m_vertex_positions.cols() - 1; i++) {
-            for (int j = 0; j < other.m_vertex_positions.cols() - 1; j++) {
-                if(err_vec[i * (other.m_vertex_positions.cols() - 1) + j] > 0 && (!same || abs(i - j) > 2)) {
+            for (int j = same ? i : 0; j < other.m_vertex_positions.cols() - 1; j++) {
+                if(err_vec[i * (other.m_vertex_positions.cols() - 1) + j] > 0) {
                     auto res = minimum_distance(i, j, m_vertex_positions, other.m_vertex_positions);
                     Vector3 n_ij = res.head(3);
                     Float md_ij = n_ij.norm();
