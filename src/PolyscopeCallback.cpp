@@ -335,7 +335,7 @@ static void makeConfigWindow()
                 }
 
                 const std::string label_end = "Rod end for rod " + std::to_string(rod_index);
-                bool end_changed = ImGui::SliderAngle(label_end.c_str(), &rod_thetas(1, rod_index), 0);
+                bool end_changed = ImGui::SliderAngle(label_end.c_str(), &rod_thetas(1, rod_index), 0, 3000);
                 if (end_changed)
                 {
                     rods[rod_index].setBoundaryEdgeTheta(rod_thetas(1, rod_index));
