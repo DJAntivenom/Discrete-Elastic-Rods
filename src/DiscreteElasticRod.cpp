@@ -44,6 +44,9 @@ DiscreteElasticRod::DiscreteElasticRod(const InitialConfiguration &ic,
 
     m_w_overbar = ic.getRestOmega();
 
+    m_target_0 = m_vertex_positions.col(0);
+    m_target_np1 = m_vertex_positions.col(m_n + 1);
+
     transportBishopFrame();
 }
 
@@ -83,6 +86,9 @@ DiscreteElasticRod::DiscreteElasticRod(Matrix3X &vertex_positions,
     m_w_overbar(w_overbar)
 {
     m_total_rod_length = m_edge_length.sum();
+
+    m_target_0 = m_vertex_positions.col(0);
+    m_target_np1 = m_vertex_positions.col(m_n + 1);
 }
 
 void DiscreteElasticRod::update(double time_step, double delta_time, size_t max_newton_iterations)
@@ -120,10 +126,8 @@ void DiscreteElasticRod::update(double time_step, double delta_time, size_t max_
     print_debug(m_vertex_positions);
 }
 
-void DiscreteElasticRod::preCollisionUpdate(double delta_time, size_t max_newton_iterations) {
-#ifdef KEEP_TURNING
-    m_edge_theta[m_n] += 10 * M_PI * delta_time;
-#endif
+void DiscreteElasticRod::preCollisionUpdate(double delta_time, double real_time, size_t max_newton_iterations) {
+    m_edge_theta[m_edge_theta.rows() - 1] += m_rotation_speed * real_time * M_PI / 180;
     /* algorithm outline */
 
     /// 4., 5. apply torque and integrate rigid body
@@ -139,7 +143,7 @@ void DiscreteElasticRod::preCollisionUpdate(double delta_time, size_t max_newton
     print_debug("post constraints");
 }
 
-void DiscreteElasticRod::postCollisionUpdate(double delta_time, size_t max_newton_iterations) {
+void DiscreteElasticRod::postCollisionUpdate(size_t max_newton_iterations) {
 
     /// 10. update natural bishop frame, i.e. apply rotation (P_i in paper)
     transportBishopFrame();
@@ -156,6 +160,9 @@ void DiscreteElasticRod::postCollisionUpdate(double delta_time, size_t max_newto
 void DiscreteElasticRod::setVertexPosition(uint64_t vertex_index, const Vector3 &new_position)
 {
     m_vertex_positions.col(vertex_index) = new_position;
+
+    m_target_0 = m_vertex_positions.col(0);
+    m_target_np1 = m_vertex_positions.col(m_n + 1);
 
     transportBishopFrame();
 }
@@ -175,6 +182,9 @@ void DiscreteElasticRod::randomizeVertexPositions()
     m_vertex_velocities.setZero(); //starting at rest
 
     m_is_straight_isotropic = false;
+
+    m_target_0 = m_vertex_positions.col(0);
+    m_target_np1 = m_vertex_positions.col(m_n + 1);
     transportBishopFrame();
 }
 

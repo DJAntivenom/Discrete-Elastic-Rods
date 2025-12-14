@@ -130,6 +130,11 @@ private:
      */
     Matrix4X m_w_overbar;
 
+    /**
+     * Targets for the boundary vertices.
+     */
+    Vector3 m_target_0, m_target_np1;
+
 public:
     /**
      * @brief Creates a discrete elastic rod with `n` inner vertices.
@@ -151,11 +156,11 @@ public:
      * \brief the following two methods split the simulation time_step in half, before and after the time_step respectively.
      */
 
-    void preCollisionUpdate(double delta_time, size_t max_newton_iterations);
+    void preCollisionUpdate(double delta_time, double real_time, size_t max_newton_iterations);
 
     void calculateContactForces(const int max_iter, DiscreteElasticRod &other, const bool same, const Float delta_time);
 
-    void postCollisionUpdate(double delta_time, size_t max_newton_iterations);
+    void postCollisionUpdate(size_t max_newton_iterations);
 
     inline uint64_t getN() const { return m_n; }
 
