@@ -1,11 +1,12 @@
 #include <DiscreteElasticRod.hpp>
+//#include "contacts.cpp"
 
 #include <iostream>
 
 #include "common.h"
 
 DiscreteElasticRod::DiscreteElasticRod(const InitialConfiguration &ic,
-                                       Float alpha, Float beta) :
+                                       Float alpha, Float beta, Float total_mass) :
     m_vertex_positions(ic.getInitialPositions()),
     m_vertex_velocities(3, ic.getN() + 2),
     m_bishop_frame_vector{ 0., 0., 1. },
@@ -22,13 +23,14 @@ DiscreteElasticRod::DiscreteElasticRod(const InitialConfiguration &ic,
 {
     for (uint64_t i = 1; i < m_n + 2; ++i)
     {
+        /* because the edges are inextensible, the rod's length can be calculated from the vertices */
         m_edge_length[i - 1] = (m_vertex_positions.col(i) - m_vertex_positions.col(i - 1)).norm();
     }
     m_l_i[0] = m_edge_length[0];
     m_l_i.segment(1, m_n) = m_edge_length.head(m_n) + m_edge_length.tail(m_n);
     m_l_i[m_n + 1] = m_edge_length[m_n];
 
-    m_vertex_mass.setConstant(1.0f);
+    m_vertex_mass.setConstant(total_mass / (m_n + 2));
 
     m_total_rod_length = m_edge_length.sum();
 
@@ -81,8 +83,42 @@ DiscreteElasticRod::DiscreteElasticRod(Matrix3X &vertex_positions,
     m_total_rod_length = m_edge_length.sum();
 }
 
-void DiscreteElasticRod::update(double delta_time, size_t max_newton_iterations)
-{
+void DiscreteElasticRod::update(double delta_time, size_t max_newton_iterations) {
+#ifdef KEEP_TURNING
+    m_edge_theta[m_n] += 2 * M_PI * delta_time;
+#endif
+    /* algorithm outline */
+
+    /// 4., 5. apply torque and integrate rigid body
+    /// is handled by just setting the handle to some position
+
+    /// 6., 7. compute forces (given in forumla 11 and above (sec. 7.1))
+    /// integrate centerline => apply symplectic euler, see ex.1 handout for formula
+    /// initial velocity is zero
+    doSymplecticEuler(delta_time);
+
+    /// 8. enforce constraints to guarantee inextensibility
+    applyConstraints(max_newton_iterations);
+    print_debug("post constraints");
+    /// 9. handle collisions (not discussed in detail in paper, but reference in paper)
+
+    //calculateContactForces(max_newton_iterations * 2, m_radius, m_vertex_positions, m_vertex_positions, true, m_vertex_velocities, m_vertex_velocities, delta_time);
+
+    print_debug("post collisions");
+
+    /// 10. update natural bishop frame, i.e. apply rotation (P_i in paper)
+    transportBishopFrame();
+    print_debug("post transporting bishop frame");
+    print_debug(m_vertex_positions);
+
+    /// 11. quasistatic material frame update (Newton according to equation 4 in paper)
+    /// => Use newton solver from exercises
+    applyTwist(max_newton_iterations);
+    print_debug("post-twist");
+    print_debug(m_vertex_positions);
+}
+
+void DiscreteElasticRod::preCollisionUpdate(double delta_time, size_t max_newton_iterations) {
 #ifdef KEEP_TURNING
     m_edge_theta[m_n] += 10 * M_PI * delta_time;
 #endif
@@ -96,10 +132,12 @@ void DiscreteElasticRod::update(double delta_time, size_t max_newton_iterations)
     /// initial velocity is zero
     doSymplecticEuler(delta_time);
 
-    /// 8. TODO: enforce constraints to guarantee inextensibility
+    /// 8. enforce constraints to guarantee inextensibility
     applyConstraints(max_newton_iterations);
     print_debug("post constraints");
-    /// 9. TODO: handle collisions (not discussed in detail in paper, but reference in paper)
+}
+
+void DiscreteElasticRod::postCollisionUpdate(double delta_time, size_t max_newton_iterations) {
 
     /// 10. update natural bishop frame, i.e. apply rotation (P_i in paper)
     transportBishopFrame();
@@ -405,8 +443,6 @@ std::pair<DiscreteElasticRod, DiscreteElasticRod> DiscreteElasticRod::cutAtVerte
         bishop_frame_2, edge_theta_2, vertex_mass_2,
         l_i_2, m_B_matrix, w_overbar_2, n_2,
         m_radius, m_is_straight_isotropic, m_alpha, m_beta);
-
-    //TODO: Test that no data is duplicated (except for the final vertex) or lost this way
-    //TODO: how to delete this rod after creating the other two, and make sure that these new ones are animated?
+    
     return std::make_pair(discrete_elastic_rod_1, discrete_elastic_rod_2);
 }

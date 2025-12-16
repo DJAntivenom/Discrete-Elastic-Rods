@@ -17,7 +17,8 @@
 bool DiscreteElasticRod::getConstraints(const Opt::VectorX &x_lambda, Opt::Float &energy) const {
     //print_debug("");
 
-    VectorX C = VectorX::Zero(m_n + 1);
+    VectorX C(m_n + 1);
+    C.setZero();
     for (uint64_t i = 0; i <= m_n; i++) {
         //For first constraint formulation
         // $E_s = 1/2 (|x_{i+1} - x_i| - |\bar{e_i}|)^2$
@@ -147,7 +148,8 @@ bool DiscreteElasticRod::getConstraintGradient(const Opt::VectorX &x_lambda, Opt
     };
 #endif
 
-    gradient = VectorX::Zero(3 * (m_n + 2));
+    gradient = VectorX(3 * (m_n + 2));
+    gradient.setZero();
 
     // For inextensibility, do not allow vertices 0 and n+1 to move, since they are fixed.
     // TODO: Validate if this sum range is correct
@@ -433,7 +435,8 @@ void DiscreteElasticRod::applyConstraints(size_t max_newton_iterations) {
 
     bool exit = false;
     for (size_t step = 0; step < max_newton_iterations; ++step) {
-        VectorX x_lambda = VectorX::Zero(3 * (m_n + 2));
+        VectorX x_lambda(3 * (m_n + 2));
+        x_lambda.setZero();
         x_lambda.head(3 * (m_n + 2)) = m_vertex_positions.reshaped(3 * (m_n + 2), 1);
 
         auto result = opt.step(x_lambda);

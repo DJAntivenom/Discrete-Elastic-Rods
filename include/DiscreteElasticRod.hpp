@@ -132,7 +132,7 @@ public:
      *  corresponding to the constrained boundary vertices.
      */
     DiscreteElasticRod(const InitialConfiguration &initial_configuration,
-                       Float alpha, Float beta);
+                       Float alpha, Float beta, Float total_mass = 0.1);
 
     virtual ~DiscreteElasticRod() = default;
 
@@ -141,6 +141,16 @@ public:
      * \param delta_time The number of seconds that have passed since the last update.
      */
     void update(double delta_time, size_t max_newton_iterations);
+
+    /*
+     * \brief the following two methods split the simulation time_step in half, before and after the time_step respectively.
+     */
+
+    void preCollisionUpdate(double delta_time, size_t max_newton_iterations);
+
+    void calculateContactForces(const int max_iter, DiscreteElasticRod &other, const bool same, const Float delta_time);
+
+    void postCollisionUpdate(double delta_time, size_t max_newton_iterations);
 
     inline uint64_t getN() const { return m_n; }
 
@@ -204,6 +214,8 @@ public:
     {
         return getEdges().colwise().normalized();
     }
+
+    inline Float getRadius() const { return m_radius; }
 
     /**
      * @brief Get kappa_i from the paper, i.e. discrete curvature at vertices.
